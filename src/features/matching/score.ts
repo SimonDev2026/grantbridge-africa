@@ -65,6 +65,22 @@ export function isEligible(a: QuizAnswers, g: GrantRow, regions: string[]): bool
   return g.scope === 'international' || g.scope === 'africa';
 }
 
+/**
+ * Country-only eligibility (used by the mid-quiz preview before the
+ * applicant type is known). Same country rules as isEligible, without the
+ * applicant-type check.
+ */
+export function isCountryEligible(g: GrantRow, country: string, regions: string[]): boolean {
+  if (!country) return true;
+  if (g.all_countries) return true;
+  if (g.eligible_countries?.length && g.eligible_countries.includes(country)) return true;
+  if (g.scope === 'national') return false;
+  if (g.eligible_regions?.length && g.eligible_regions.some((r: string) => regions.includes(r)))
+    return true;
+  if (!g.eligible_countries?.length && !g.eligible_regions?.length) return true;
+  return g.scope === 'international' || g.scope === 'africa';
+}
+
 /** Fit score (0–100) + human-readable reasons, in the route's exact weights. */
 export function scoreGrant(
   a: QuizAnswers,

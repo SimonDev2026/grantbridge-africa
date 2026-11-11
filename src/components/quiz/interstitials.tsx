@@ -107,7 +107,7 @@ export function MapInterstitial({
                 key={h.id}
                 className='rounded-full border border-brand-line bg-brand-sunSoft px-3 py-1.5 text-xs font-semibold text-brand-ink'
               >
-                {h.funderName} · {formatAmount(h)}
+                {h.funderName ?? h.title} · {formatAmount(h)}
               </span>
             ))}
           </div>

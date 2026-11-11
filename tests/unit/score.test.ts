@@ -2,7 +2,7 @@
 // Fixtures are real seed grants — see tests/fixtures/seed-grants.ts. No DB, no AI.
 import { describe, expect, it } from 'vitest';
 
-import { isEligible, rankGrants, scoreGrant } from '@/features/matching/score';
+import { isCountryEligible, isEligible, rankGrants, scoreGrant } from '@/features/matching/score';
 
 import {
   AWESOME_DISABILITY,
@@ -58,6 +58,32 @@ describe('isEligible', () => {
   it('shows a grant with no country/region restriction stated', () => {
     const unrestricted = { ...D_PRIZE, eligible_countries: null, eligible_regions: null };
     expect(isEligible(NIGERIA_NGO, unrestricted, NIGERIA_REGIONS)).toBe(true);
+  });
+});
+
+describe('isCountryEligible — the mid-quiz preview filter (no applicant-type check)', () => {
+  it('passes an Africa-wide grant for Nigeria (D-Prize, eligible_regions Africa)', () => {
+    expect(isCountryEligible(D_PRIZE, 'Nigeria', NIGERIA_REGIONS)).toBe(true);
+  });
+
+  it('passes an all-countries grant anywhere (Pollination)', () => {
+    expect(isCountryEligible(POLLINATION, 'Kenya', ['East Africa', 'Africa'])).toBe(true);
+  });
+
+  it('passes a national grant for its own country (Japan GGP Nigeria)', () => {
+    expect(isCountryEligible(JAPAN_GGP_NIGERIA, 'Nigeria', NIGERIA_REGIONS)).toBe(true);
+  });
+
+  it('rejects a national grant for another country (GEF Malawi for Nigeria)', () => {
+    expect(isCountryEligible(GEF_MALAWI, 'Nigeria', NIGERIA_REGIONS)).toBe(false);
+  });
+
+  it('passes a region-matching Africa grant for Kenya (USADF, eligible_regions Africa)', () => {
+    expect(isCountryEligible(USADF, 'Kenya', ['East Africa', 'Africa'])).toBe(true);
+  });
+
+  it('passes everything when no country is known yet (start of the quiz)', () => {
+    expect(isCountryEligible(GEF_MALAWI, '', [])).toBe(true);
   });
 });
 

@@ -4,9 +4,9 @@
 // "You are in the right place" map screen. Nothing here is hard-coded:
 // every number comes from the grants/funders tables.
 import { BRAND } from '@/config/brand';
-import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
+import { supabasePublicClient } from '@/libs/supabase/supabase-public';
 
-const db = supabaseAdminClient as any;
+const db = supabasePublicClient as any;
 
 export async function GET() {
   try {
@@ -30,14 +30,18 @@ export async function GET() {
       (funders ?? []).map((f: any) => [f.id, f.name])
     );
     const funderName = (g: any) => funderNameById.get(g.funder_id) ?? null;
-    const funderNames = [...new Set(open.map(funderName).filter(Boolean))];
+    // Distinct funders behind the open grants, counted from funder_id on
+    // the grants themselves — NOT from the funders table, whose rows the
+    // anon key cannot read until migration 20261111000500 is applied.
+    // (Counting names from the funders query returned 0 funders live.)
+    const funderIds = new Set(open.map((g: any) => g.funder_id).filter(Boolean));
     const withUsdMax = open
       .filter((g: any) => typeof g.amount_usd_max === 'number' && g.amount_usd_max > 0)
       .sort((a: any, b: any) => b.amount_usd_max - a.amount_usd_max);
 
     return Response.json({
       openGrants: open.length,
-      funders: funderNames.length,
+      funders: funderIds.size,
       totalFunders: (funders ?? []).length,
       countriesCovered: BRAND.countriesCovered,
       highlights: withUsdMax.slice(0, 6).map((g: any) => ({

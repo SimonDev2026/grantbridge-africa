@@ -11,10 +11,10 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
-import { type GrantRow, type QuizAnswers,rankGrants } from '@/features/matching/score';
-import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
+import { type GrantRow, isCountryEligible, type QuizAnswers,rankGrants } from '@/features/matching/score';
+import { supabasePublicClient } from '@/libs/supabase/supabase-public';
 
-const db = supabaseAdminClient as any;
+const db = supabasePublicClient as any;
 
 const Body = z.object({
   applicant_type: z.string().optional().default(''),
@@ -48,18 +48,6 @@ function mapGrant(g: any, country: string) {
     country,
     example: true,
   };
-}
-
-/** Country-only eligibility (used before applicant type is known). */
-function countryEligible(g: GrantRow, country: string, regions: string[]): boolean {
-  if (!country) return true;
-  if (g.all_countries) return true;
-  if (g.eligible_countries?.length && g.eligible_countries.includes(country)) return true;
-  if (g.scope === 'national') return false;
-  if (g.eligible_regions?.length && g.eligible_regions.some((r: string) => regions.includes(r)))
-    return true;
-  if (!g.eligible_countries?.length && !g.eligible_regions?.length) return true;
-  return g.scope === 'international' || g.scope === 'africa';
 }
 
 export async function POST(req: NextRequest) {
@@ -105,7 +93,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Fallback: open grants, country-filtered when a country is known.
-    const eligible = open.filter((g) => countryEligible(g, a.country, regions));
+    const eligible = open.filter((g) => isCountryEligible(g, a.country, regions));
     const byAmount = [...eligible].sort(
       (x, y) => (y.amount_usd_max ?? 0) - (x.amount_usd_max ?? 0),
     );

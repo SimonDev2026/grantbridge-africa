@@ -1,0 +1,20 @@
+-- 20261111000500_public_funder_names.sql
+-- Let the anon key read the funders table.
+--
+-- WHY: the funders table has RLS enabled with no public policy (only the
+-- service role could read it), so every public surface that shows a funder
+-- name renders null — verified live 2026-11-11, the homepage HTML
+-- contains funderName:null for all 13 open grants, and the quiz map
+-- interstitial's highlights had no names. The quiz stats/preview/results
+-- endpoints now use the anon client (see supabase-public.ts), so they need
+-- this policy for real funder names.
+--
+-- SAFE: funders holds only public organisational info (name, type, website,
+-- HQ country, verified_at). No internal notes, contacts or credentials
+-- live in this table, so a public SELECT policy exposes nothing private.
+-- sources / raw_pages stay service-role-only (they hold collector internals).
+--
+-- APPLY via the Supabase dashboard SQL Editor (paste verbatim, like the
+-- earlier migrations). Until it runs, funder names stay null and the UI
+-- falls back to the grant title in highlight chips.
+create policy "public funder names" on funders for select using (true);
