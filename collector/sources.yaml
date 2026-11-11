@@ -1,5 +1,9 @@
-# Starter list. Add 40-60 sources before launch; check each site's terms of use and robots.txt.
+# GrantBridge Africa — collector sources.
+# Every URL below was verified live (HTTP 200 or a successful page fetch) on 2026-11-11.
+# Prefer the page that actually lists grants / calls for proposals over a funder homepage.
 # method: api | scrape.  follow: regex of links to open from a listing page.
+# robots.txt is respected at crawl time (see README.md); sources whose robots.txt
+# forbids the listing page, or that sit behind a bot wall, are NOT listed here.
 sources:
   - name: Simpler Grants.gov (US federal, open to any applicant)
     url: https://api.simpler.grants.gov/v1/opportunities/search
@@ -7,36 +11,127 @@ sources:
     api: simpler_grants
     query: ""
 
-  - name: GEF Small Grants Programme
+  - name: EU Funding & Tenders — opportunity search
+    url: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-search
+    method: scrape
+    follow: "opportunit|call|topic"
+    max_pages: 15
+
+  - name: GEF Small Grants Programme (UNDP)
     url: https://sgp.undp.org/
     method: scrape
+    follow: "grant|call|fund|proposal"
+    max_pages: 15
 
-  - name: Tony Elumelu Foundation programmes
-    url: https://www.tonyelumelufoundation.org/
+  - name: Tony Elumelu Foundation — Entrepreneurship Programme
+    url: https://www.tonyelumelufoundation.org/entrepreneurship-programme
     method: scrape
+    follow: "programme|apply|grant|fund"
+    max_pages: 10
 
-  - name: US African Development Foundation
-    url: https://www.usadf.gov/
+  - name: US African Development Foundation — Apply
+    url: https://www.usadf.gov/apply
     method: scrape
+    follow: "grant|apply|fund|proposal"
+    max_pages: 10
 
-  - name: African Women's Development Fund
+  - name: African Women's Development Fund (open calls announced on homepage)
     url: https://awdf.org/
     method: scrape
-
-  - name: Global Fund for Children
-    url: https://globalfundforchildren.org/
-    method: scrape
+    follow: "grant|call|fund|proposal"
+    max_pages: 15
 
   - name: Awesome Foundation
     url: https://www.awesomefoundation.org/en
     method: scrape
-
-  - name: US Embassy Nigeria – grant opportunities
-    url: https://ng.usembassy.gov/
-    method: scrape
-    follow: "grant|funding|opportunit"
+    follow: "chapter|apply|grant|project"
     max_pages: 15
 
-  # Next to add: EU Funding & Tenders search API, IATI Datastore API (needs free key), World Bank,
-  # AfDB, UN agencies, Canada Fund for Local Initiatives pages per country, other embassies,
-  # African foundations, national funds (TETFund, BOI, LSETF, NYDA, Youth Enterprise Fund), CSR programmes.
+  - name: Ford Foundation — Grants Database
+    url: https://www.fordfoundation.org/work/our-grants/grants-database/
+    method: scrape
+    follow: "grant"
+    max_pages: 15
+
+  - name: Open Society Foundations — Grants
+    url: https://www.opensocietyfoundations.org/grants
+    method: scrape
+    follow: "grant|fellowship|fund"
+    max_pages: 15
+
+  - name: Wellcome — Grant funding schemes
+    url: https://wellcome.org/grant-funding/schemes
+    method: scrape
+    follow: "grant|funding|scheme"
+    max_pages: 15
+
+  - name: The Pollination Project — Apply
+    url: https://thepollinationproject.org/apply/
+    method: scrape
+    follow: "grant|apply|fund"
+    max_pages: 10
+
+  - name: Echoing Green — Fellowship
+    url: https://echoinggreen.org/fellowship/
+    method: scrape
+    follow: "fellowship|apply|fund"
+    max_pages: 10
+
+  - name: Comic Relief — Funding
+    url: https://www.comicrelief.com/funding
+    method: scrape
+    follow: "fund|grant|apply"
+    max_pages: 15
+
+  - name: Oak Foundation — Programmes
+    url: https://oakfnd.org/programmes/
+    method: scrape
+    follow: "programme|grant|fund"
+    max_pages: 15
+
+  - name: Hewlett Foundation — Grants
+    url: https://www.hewlett.org/grants/
+    method: scrape
+    follow: "grant|program"
+    max_pages: 15
+
+  - name: Rockefeller Foundation — Grants
+    url: https://www.rockefellerfoundation.org/grants/
+    method: scrape
+    follow: "grant"
+    max_pages: 15
+
+  - name: Gates Foundation — Our Work (programmes & grantmaking)
+    url: https://www.gatesfoundation.org/our-work
+    method: scrape
+    follow: "grant|program|fund"
+    max_pages: 15
+
+  - name: Canada Fund for Local Initiatives (CFLI)
+    url: https://www.international.gc.ca/world-monde/funding-financement/cfli-fcil/index.aspx?lang=eng
+    method: scrape
+    follow: "cfli|fcil|fund|grant|call"
+    max_pages: 15
+
+  - name: TETFund Nigeria (funding announcements on homepage)
+    url: https://tetfund.gov.ng/
+    method: scrape
+    follow: "intervention|grant|fund|call|application"
+    max_pages: 15
+
+  - name: Lagos State Employment Trust Fund (LSETF)
+    url: https://lsetf.ng/
+    method: scrape
+    follow: "loan|fund|programme|program|apply|grant"
+    max_pages: 15
+
+  # Dropped / not added (see README.md "Sources dropped and why"):
+  # US Embassy Nigeria grant-opportunities page (403, unverifiable), Global Fund for
+  # Children (no public open-call listing; invitation-only partner funding),
+  # MacArthur Foundation (robots.txt disallows /grants/), African Development Bank
+  # (Cloudflare bot wall blocks verification and crawling), National Endowment for
+  # Democracy (grants URLs 404), Mastercard Foundation (no open calls, no unsolicited
+  # proposals), USAID (403; programme dismantled).
+  # Next to add: IATI Datastore API (needs free key), World Bank, UN agencies,
+  # other embassies' grant pages, African national funds (BOI, NYDA, Youth Enterprise
+  # Fund), CSR programmes. Check each site's terms of use and robots.txt first.

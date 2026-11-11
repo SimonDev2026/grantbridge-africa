@@ -6,7 +6,8 @@ Steps:  collect  -> raw pages from APIs and funder websites (Crawl4AI, Apache-2.
 
 Run:    python pipeline.py collect && python pipeline.py extract && python pipeline.py embed
 Env:    SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SIMPLER_GRANTS_API_KEY (optional)
-        AI_BASE_URL, AI_API_KEY, AI_EXTRACT_MODEL, AI_EMBED_MODEL  (Cloudflare Workers AI free tier by default)
+        AI_BASE_URL, AI_API_KEY, AI_EXTRACT_MODEL, AI_EMBED_MODEL  (Cloudflare Workers AI free tier by default;
+        AI_EXTRACT_MODEL defaults to @cf/qwen/qwen3-30b-a3b-fp8, AI_EMBED_MODEL to @cf/baai/bge-m3 if unset)
         AI_FALLBACK_BASE_URL, AI_FALLBACK_API_KEY, AI_FALLBACK_MODEL (optional, e.g. Groq free tier)
 """
 import asyncio, hashlib, json, os, re, sys

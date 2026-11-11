@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { upsertUserSubscription } from '@/features/account/controllers/upsert-user-subscription';
 import { upsertPrice } from '@/features/pricing/controllers/upsert-price';
 import { upsertProduct } from '@/features/pricing/controllers/upsert-product';
+import { notifyAdminNewOrder } from '@/features/service-orders/notify';
 import { sendCapiEvent } from '@/libs/meta/capi';
 import { getStripeAdmin } from '@/libs/stripe/stripe-admin';
 import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
@@ -81,8 +82,19 @@ export async function POST(req: Request) {
               const md = (li.price?.product as Stripe.Product).metadata;
               if (md.kind === 'draft_credit')
                 await (supabaseAdminClient as any).rpc('add_draft_credits', { p_user: checkoutUserId, p_n: Number(md.credits || 1) * (li.quantity || 1) });
-              if (md.kind === 'service')
-                await (supabaseAdminClient as any).from('service_requests').insert({ user_id: checkoutUserId, package: md.package, stripe_session_id: checkoutSession.id, grant_id: checkoutSession.metadata?.grant_id || null });
+              if (md.kind === 'service') {
+                const { data: order } = await (supabaseAdminClient as any)
+                  .from('service_requests')
+                  .insert({ user_id: checkoutUserId, package: md.package, stripe_session_id: checkoutSession.id, grant_id: checkoutSession.metadata?.grant_id || null, amount_paid_cents: checkoutSession.amount_total ?? null, currency: 'usd', status: 'paid' })
+                  .select('id, package, amount_paid_cents')
+                  .single();
+                // Email the owner (no-op until Resend is configured); never break the webhook.
+                try {
+                  if (order) await notifyAdminNewOrder(order);
+                } catch (e) {
+                  console.error('notifyAdminNewOrder failed:', (e as Error).message);
+                }
+              }
             }
           }
 

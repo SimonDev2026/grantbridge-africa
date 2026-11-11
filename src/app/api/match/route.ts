@@ -29,11 +29,24 @@ export async function POST() {
   const { data: p } = await db.from('profiles').select('*').eq('user_id', user.id).single();
   if (!p) return Response.json({ error: 'Complete your profile first' }, { status: 400 });
 
-  // 1) Profile text -> bge-m3 vector; regions from the lookup table
-  const text = [p.description, p.sectors?.join(' '), p.beneficiaries?.join(' '), p.country].filter(Boolean).join('. ');
-  const [vec] = await embed([text]);
+  // Step 9 — cache the profile embedding: only re-embed when the profile
+  // changed since the last match run (free AI tiers are precious).
+  const { data: latestMatch } = await db
+    .from('matches')
+    .select('created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const profileChanged =
+    !p.embedding || !latestMatch || new Date(p.updated_at ?? 0) > new Date(latestMatch.created_at);
   const { data: cr } = await db.from('country_regions').select('regions').eq('country', p.country).maybeSingle();
-  await db.from('profiles').update({ embedding: toVector(vec), regions: cr?.regions ?? ['Africa'] }).eq('user_id', user.id);
+  if (profileChanged) {
+    // 1) Profile text -> bge-m3 vector; regions from the lookup table
+    const text = [p.description, p.sectors?.join(' '), p.beneficiaries?.join(' '), p.country].filter(Boolean).join('. ');
+    const [vec] = await embed([text]);
+    await db.from('profiles').update({ embedding: toVector(vec), regions: cr?.regions ?? ['Africa'] }).eq('user_id', user.id);
+  }
 
   // 2) Eligibility filter + score in Postgres (see migration: match_grants)
   const { data: ranked, error } = await db.rpc('match_grants', { p_user: user.id, p_limit: 50 });

@@ -10,10 +10,24 @@ const db = supabaseAdminClient as any;
 const MONTHLY_LIMIT: Record<string, number> = { seeker: 1, writer: 10, pro: 100000 };
 
 export async function POST(req: Request) {
-  const { grantId } = await req.json();
+  const { grantId, force } = await req.json();
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: 'Sign in first' }, { status: 401 });
+
+  // Step 9 — AI result caching: reuse the latest draft for this grant instead
+  // of spending free-tier AI calls again (unless the user asked to regenerate).
+  if (!force) {
+    const { data: existing } = await db
+      .from('drafts')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('grant_id', grantId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existing) return Response.json({ ...existing, cached: true });
+  }
 
   // Plan check: the starter stores subscriptions with price -> product metadata. Map your product names here.
   const { data: sub } = await db.from('subscriptions').select('status, prices(products(name))').eq('user_id', user.id)
