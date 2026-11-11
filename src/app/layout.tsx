@@ -97,6 +97,7 @@ function Footer() {
               <Link href='/pricing'>Pricing</Link>
               <Link href='/dashboard'>Dashboard</Link>
               <Link href='/news'>News</Link>
+              <Link href='/events'>Events</Link>
             </nav>
           </div>
           <div className='flex flex-col gap-2'>

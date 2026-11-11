@@ -209,10 +209,13 @@ export function ScanInterstitial({
 
 export function AlmostReadyInterstitial({
   stats,
+  signedIn,
   onBack,
   onContinue,
 }: {
   stats: QuizStats | null;
+  /** Signed-in users see every match already — never promise them an email unlock. */
+  signedIn: boolean;
   onBack: () => void;
   onContinue: () => void;
 }) {
@@ -242,8 +245,9 @@ export function AlmostReadyInterstitial({
         ))}
       </div>
       <p className='mt-4 text-center text-sm text-brand-muted'>
-        Your top 3 matches are free to see. The rest unlock with your email — no card, no trial,
-        no commitment.
+        {signedIn
+          ? 'Every match is shown on your results page and saved to your account — no card, no trial, no commitment.'
+          : 'Your top 3 matches are free to see. The rest unlock with your email — no card, no trial, no commitment.'}
       </p>
     </InterstitialShell>
   );

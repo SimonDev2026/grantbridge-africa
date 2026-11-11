@@ -393,3 +393,179 @@ export async function deleteNewsPost(id: string) {
   revalidatePath('/news');
   return { ok: true };
 }
+
+// ---------- Backstage CMS: events, figures, testimonials ----------
+export type CmsEventInput = {
+  title: string;
+  starts_at: string;
+  location: string;
+  description: string;
+  status: 'draft' | 'published';
+};
+
+export type CmsStatInput = {
+  key: string;
+  label: string;
+  sub: string;
+  value: string;
+  sort_order: number;
+  status: 'draft' | 'published';
+};
+
+export type CmsTestimonialInput = {
+  name: string;
+  role: string;
+  quote: string;
+  status: 'draft' | 'published';
+};
+
+function cmsStatus(status: string): 'draft' | 'published' {
+  return status === 'published' ? 'published' : 'draft';
+}
+
+export async function saveCmsEvent(id: string | null, input: CmsEventInput) {
+  await requireAdmin();
+  const title = (input.title ?? '').trim();
+  if (!title) return { error: 'A title is required' };
+  const startsAt = new Date(input.starts_at);
+  if (Number.isNaN(startsAt.getTime())) return { error: 'A valid date and time is required' };
+  const row = {
+    title,
+    starts_at: startsAt.toISOString(),
+    location: (input.location ?? '').trim(),
+    description: (input.description ?? '').trim(),
+    status: cmsStatus(input.status),
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = id
+    ? await db.from('cms_events').update(row).eq('id', id)
+    : await db.from('cms_events').insert(row);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/cms');
+  revalidatePath('/events');
+  revalidatePath('/');
+  return { ok: true };
+}
+
+export async function setCmsEventStatus(id: string, status: 'draft' | 'published') {
+  await requireAdmin();
+  const { error } = await db
+    .from('cms_events')
+    .update({ status: cmsStatus(status), updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/cms');
+  revalidatePath('/events');
+  revalidatePath('/');
+  return { ok: true };
+}
+
+export async function deleteCmsEvent(id: string) {
+  await requireAdmin();
+  const { error } = await db.from('cms_events').delete().eq('id', id);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/cms');
+  revalidatePath('/events');
+  revalidatePath('/');
+  return { ok: true };
+}
+
+export async function saveCmsStat(id: string | null, input: CmsStatInput) {
+  await requireAdmin();
+  const key = (input.key ?? '').trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_');
+  const label = (input.label ?? '').trim();
+  if (!key) return { error: 'A key is required (letters, numbers and underscores)' };
+  if (!label) return { error: 'A label is required' };
+  const row: Record<string, unknown> = {
+    key,
+    label,
+    sub: (input.sub ?? '').trim(),
+    value: (input.value ?? '').trim(),
+    sort_order: Number.isFinite(input.sort_order) ? input.sort_order : 0,
+    status: cmsStatus(input.status),
+    updated_at: new Date().toISOString(),
+  };
+  if (id) {
+    // Live rows are computed from the grants tables at request time — an
+    // admin edit must never be able to store a competing typed value.
+    const { data: existing } = await db.from('cms_stats').select('source').eq('id', id).single();
+    if (existing?.source === 'live') {
+      row.value = '';
+      row.key = undefined;
+      row.source = undefined;
+    }
+    const { error } = await db.from('cms_stats').update(row).eq('id', id);
+    if (error) return { error: error.message };
+  } else {
+    row.source = 'manual';
+    const { error } = await db.from('cms_stats').insert(row);
+    if (error) return { error: error.message };
+  }
+  revalidatePath('/admin/cms');
+  revalidatePath('/');
+  return { ok: true };
+}
+
+export async function setCmsStatStatus(id: string, status: 'draft' | 'published') {
+  await requireAdmin();
+  const { error } = await db
+    .from('cms_stats')
+    .update({ status: cmsStatus(status), updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/cms');
+  revalidatePath('/');
+  return { ok: true };
+}
+
+export async function deleteCmsStat(id: string) {
+  await requireAdmin();
+  const { error } = await db.from('cms_stats').delete().eq('id', id);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/cms');
+  revalidatePath('/');
+  return { ok: true };
+}
+
+export async function saveCmsTestimonial(id: string | null, input: CmsTestimonialInput) {
+  await requireAdmin();
+  const name = (input.name ?? '').trim();
+  const quote = (input.quote ?? '').trim();
+  if (!name) return { error: 'A name is required' };
+  if (!quote) return { error: 'A quote is required' };
+  const row = {
+    name,
+    role: (input.role ?? '').trim(),
+    quote,
+    status: cmsStatus(input.status),
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = id
+    ? await db.from('cms_testimonials').update(row).eq('id', id)
+    : await db.from('cms_testimonials').insert(row);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/cms');
+  revalidatePath('/');
+  return { ok: true };
+}
+
+export async function setCmsTestimonialStatus(id: string, status: 'draft' | 'published') {
+  await requireAdmin();
+  const { error } = await db
+    .from('cms_testimonials')
+    .update({ status: cmsStatus(status), updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/cms');
+  revalidatePath('/');
+  return { ok: true };
+}
+
+export async function deleteCmsTestimonial(id: string) {
+  await requireAdmin();
+  const { error } = await db.from('cms_testimonials').delete().eq('id', id);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/cms');
+  revalidatePath('/');
+  return { ok: true };
+}

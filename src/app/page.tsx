@@ -50,32 +50,87 @@ function amountLabel(g: {
 
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient();
-  const [{ data: grants }, { data: cr }] = await Promise.all([
-    supabase
-      .from('grants')
-      .select('*, funders(name)')
-      .eq('approved', true)
-      .eq('status', 'open')
-      .eq('fee_charged', false)
-      .order('deadline', { ascending: true, nullsFirst: false }),
-    supabase.from('country_regions').select('regions').eq('country', 'Nigeria').maybeSingle(),
-  ]);
+  const [{ data: grants }, { data: cr }, { data: cmsStats }, { data: cmsEvents }, { data: cmsTestimonials }] =
+    await Promise.all([
+      supabase
+        .from('grants')
+        .select('*, funders(name)')
+        .eq('approved', true)
+        .eq('status', 'open')
+        .eq('fee_charged', false)
+        .order('deadline', { ascending: true, nullsFirst: false }),
+      supabase.from('country_regions').select('regions').eq('country', 'Nigeria').maybeSingle(),
+      // CMS rows (published only — RLS). Before migration 20261111000800 is
+      // applied these queries fail and the stats band falls back to the live
+      // counts below; the events/testimonials sections simply hide.
+      supabase
+        .from('cms_stats')
+        .select('key, label, sub, value, source, sort_order')
+        .eq('status', 'published')
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('cms_events')
+        .select('id, title, starts_at, location, description')
+        .eq('status', 'published')
+        .gte('starts_at', new Date().toISOString())
+        .order('starts_at', { ascending: true })
+        .limit(3),
+      supabase
+        .from('cms_testimonials')
+        .select('id, name, role, quote')
+        .eq('status', 'published')
+        .order('created_at', { ascending: false }),
+    ]);
 
   const rows = (grants ?? []) as any[];
   const regions: string[] = (cr as any)?.regions ?? ['Africa'];
 
-  // Live stats — computed at request time, never hard-coded.
+  // Live stats — computed at request time, never hard-coded. The CMS decides
+  // which figures show and in what order; 'live' rows always take the
+  // computed value, 'manual' rows show the admin's typed value. Until the
+  // CMS tables exist, fall back to the four live figures.
   const totalFunding = rows.reduce(
     (sum, g) => sum + (g.amount_usd_max ?? g.amount_usd_min ?? 0),
     0
   );
   const funderCount = new Set(rows.map((g) => g.funder_id).filter(Boolean)).size;
-  const stats: StatDef[] = [
+  const liveValues: Record<string, { value: number; format: 'number' | 'usd' }> = {
+    open_grants: { value: rows.length, format: 'number' },
+    total_funding_usd: { value: totalFunding, format: 'usd' },
+    funders: { value: funderCount, format: 'number' },
+    countries: { value: BRAND.countriesCovered, format: 'number' },
+  };
+  const liveFallback: StatDef[] = [
     { value: rows.length, label: 'Open grants', sub: 'Live listings, checked against funder pages', format: 'number' },
     { value: totalFunding, label: 'Total funding available', sub: 'Combined maximum value of open grants, in USD', format: 'usd' },
     { value: funderCount, label: 'Funders with open calls', sub: 'International and African funders', format: 'number' },
     { value: BRAND.countriesCovered, label: 'African countries covered', sub: 'Every country, from Algeria to Zimbabwe', format: 'number' },
   ];
+  const cmsStatRows = (cmsStats ?? []) as any[];
+  const mappedStats: StatDef[] = cmsStatRows
+    .map((s): StatDef | null => {
+      if (s.source === 'live' && liveValues[s.key]) {
+        return {
+          value: liveValues[s.key].value,
+          label: s.label,
+          sub: s.sub || '',
+          format: liveValues[s.key].format,
+        };
+      }
+      if (s.source === 'manual' && String(s.value ?? '').trim()) {
+        return {
+          value: String(s.value).trim(),
+          label: s.label,
+          sub: s.sub || '',
+          format: 'text',
+        };
+      }
+      return null;
+    })
+    .filter((s): s is StatDef => s !== null);
+  const stats: StatDef[] = mappedStats.length > 0 ? mappedStats : liveFallback;
+  const upcomingEvents = (cmsEvents ?? []) as any[];
+  const testimonials = (cmsTestimonials ?? []) as any[];
 
   // Ranked example matches for the typical Nigeria/NGO profile.
   const ranked = rankGrants(EXAMPLE_PROFILE, rows, regions);
@@ -317,6 +372,74 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      {/* 5b. Upcoming events — CMS-managed; hidden entirely until an event is published */}
+      {upcomingEvents.length > 0 && (
+        <section>
+          <Reveal>
+            <h2 className='text-center'>Upcoming events</h2>
+            <p className='mx-auto mt-2 max-w-2xl text-center text-brand-muted'>
+              Webinars and info sessions — learn how to find and win grants for your organisation.
+            </p>
+          </Reveal>
+          <div className='mx-auto mt-8 grid max-w-4xl gap-4 md:grid-cols-3'>
+            {upcomingEvents.map((e) => (
+              <div key={e.id} className='rounded-2xl border border-brand-line bg-white p-6'>
+                <p className='text-xs font-semibold uppercase tracking-widest text-brand-green'>
+                  {new Date(e.starts_at).toLocaleDateString('en-GB', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                  {' · '}
+                  {new Date(e.starts_at).toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+                <h3 className='mt-2 text-base'>{e.title}</h3>
+                {e.location && (
+                  <p className='mt-1 text-sm font-semibold text-brand-ink'>{e.location}</p>
+                )}
+                {e.description && (
+                  <p className='mt-1 line-clamp-3 text-sm text-brand-muted'>{e.description}</p>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className='mt-6 text-center'>
+            <Button variant='outline' asChild>
+              <Link href='/events'>See all events →</Link>
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {/* 5c. Testimonials — CMS-managed; hidden entirely until a real testimonial is published */}
+      {testimonials.length > 0 && (
+        <section>
+          <Reveal>
+            <h2 className='text-center'>What organisations say</h2>
+            <p className='mx-auto mt-2 max-w-2xl text-center text-brand-muted'>
+              From African organisations using GrantBridge to find their grants.
+            </p>
+          </Reveal>
+          <div className='mx-auto mt-8 grid max-w-4xl gap-4 md:grid-cols-3'>
+            {testimonials.map((t) => (
+              <figure key={t.id} className='rounded-2xl border border-brand-line bg-white p-6'>
+                <blockquote className='text-sm leading-relaxed text-brand-ink'>
+                  &ldquo;{t.quote}&rdquo;
+                </blockquote>
+                <figcaption className='mt-4'>
+                  <div className='font-semibold text-brand-ink'>{t.name}</div>
+                  {t.role && <div className='text-sm text-brand-muted'>{t.role}</div>}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 6. Setup takes 5 minutes */}
       <section className='rounded-2xl bg-brand-greenSoft p-8 text-center lg:p-12'>

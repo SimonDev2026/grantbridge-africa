@@ -10,8 +10,9 @@ export function isValidEmail(email: string): boolean {
 }
 
 /**
- * Results gate — top 3 matches free, the rest blurred behind the email
- * unlock. Funders are shown with their real names (these are public
+ * Results gate — anonymous visitors see their top 3 free and the rest blurred
+ * behind the email unlock; signed-in users see every match, saved to their
+ * account. Funders are shown with their real names (these are public
  * grants); nothing is hidden as "Confidential funder".
  */
 export function ResultsGate({
@@ -66,8 +67,15 @@ export function ResultsGate({
                 combined —{' '}
               </>
             ) : null}
-            ranked by fit for your organisation. Your top 3 are free to see below; unlock the
-            rest with your email.
+            ranked by fit for your organisation. {signedIn ? (
+              <>
+                All {matches.length} shown below — saved to your account.
+              </>
+            ) : (
+              <>
+                Your top 3 are free to see below; unlock the rest with your email.
+              </>
+            )}
           </>
         ) : (
           'No open grants match your answers right now — new grants are added regularly, and we will email you when one fits.'

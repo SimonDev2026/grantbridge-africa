@@ -3,28 +3,39 @@
 import { useEffect, useRef, useState } from 'react';
 
 export type StatDef = {
-  value: number;
+  /** Numeric value for 'number'/'usd'; the exact text shown for 'text'. */
+  value: number | string;
   label: string;
   sub: string;
-  /** 'number' renders with thousands separators; 'usd' renders as $ + compact (e.g. $1.2M). */
-  format: 'number' | 'usd';
+  /**
+   * 'number' renders with thousands separators; 'usd' renders as $ + compact
+   * (e.g. $1.2M); 'text' renders the value exactly as written (admin-entered
+   * figures such as "120+").
+   */
+  format: 'number' | 'usd' | 'text';
 };
 
-function formatValue(value: number, format: StatDef['format']): string {
+function formatValue(value: number | string, format: StatDef['format']): string {
+  if (format === 'text') return String(value);
+  const n = typeof value === 'number' ? value : Number(value) || 0;
   if (format === 'usd') {
-    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-    if (value >= 1_000) return `$${Math.round(value / 1_000)}k`;
-    return `$${value.toLocaleString()}`;
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+    if (n >= 1_000) return `$${Math.round(n / 1_000)}k`;
+    return `$${n.toLocaleString()}`;
   }
-  return value.toLocaleString();
+  return n.toLocaleString();
 }
 
-function AnimatedCounter({ value, format }: { value: number; format: StatDef['format'] }) {
+function AnimatedCounter({ value, format }: { value: number | string; format: StatDef['format'] }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [display, setDisplay] = useState(0);
   const started = useRef(false);
 
+  const numeric = typeof value === 'number' ? value : Number(value) || 0;
+
   useEffect(() => {
+    // Text figures are shown exactly as written — there is nothing to count.
+    if (format === 'text') return;
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver(
@@ -36,7 +47,7 @@ function AnimatedCounter({ value, format }: { value: number; format: StatDef['fo
           const tick = (now: number) => {
             const p = Math.min(1, (now - start) / duration);
             const eased = 1 - Math.pow(1 - p, 3);
-            setDisplay(Math.round(value * eased));
+            setDisplay(Math.round(numeric * eased));
             if (p < 1) requestAnimationFrame(tick);
           };
           requestAnimationFrame(tick);
@@ -47,7 +58,9 @@ function AnimatedCounter({ value, format }: { value: number; format: StatDef['fo
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [value]);
+  }, [numeric, format]);
+
+  if (format === 'text') return <span>{String(value)}</span>;
 
   return <span ref={ref}>{formatValue(display, format)}</span>;
 }

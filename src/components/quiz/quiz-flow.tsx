@@ -337,6 +337,7 @@ export default function QuizFlow({
         <QuizProgress answered={answered} total={total} label={progressLabel} />
         <AlmostReadyInterstitial
           stats={stats}
+          signedIn={signedIn}
           onBack={back}
           onContinue={continueFromInterstitial}
         />
