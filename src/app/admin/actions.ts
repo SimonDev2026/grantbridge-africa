@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getSession } from '@/features/account/controllers/get-session';
 import { notifyAdminIntakeComplete, notifyClient } from '@/features/service-orders/notify';
 import { chat, parseJson } from '@/libs/ai/client';
+import { slugify } from '@/libs/news/rss';
 import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
 import { createSupabaseServerClient } from '@/libs/supabase/supabase-server-client';
 import { DRAFT_APPLICATION_PROMPT } from '@/prompts/draft-application';
@@ -296,5 +297,99 @@ export async function markSupportMessageReplied(messageId: string) {
   const { error } = await db.from('support_messages').update({ status: 'replied' }).eq('id', messageId);
   if (error) return { error: error.message };
   revalidatePath('/admin/support');
+  return { ok: true };
+}
+
+// ---------- News publisher ----------
+export type NewsPostInput = {
+  title: string;
+  slug: string;
+  summary: string;
+  body: string;
+  source_name: string;
+  source_url: string;
+  status: 'draft' | 'published';
+};
+
+function cleanNewsInput(input: NewsPostInput) {
+  const title = (input.title ?? '').trim();
+  const slug = slugify(title || input.slug || 'news-post') || 'news-post';
+  return {
+    title,
+    slug,
+    summary: (input.summary ?? '').trim(),
+    body: (input.body ?? '').trim(),
+    source_name: (input.source_name ?? '').trim() || null,
+    source_url: (input.source_url ?? '').trim() || null,
+    status: input.status === 'published' ? ('published' as const) : ('draft' as const),
+  };
+}
+
+/** Insert with a unique slug: appends -2, -3… when the slug is taken. */
+async function uniqueSlug(base: string, ignoreId?: string): Promise<string> {
+  for (let n = 0; n < 10; n++) {
+    const slug = n === 0 ? base : `${base}-${n + 1}`;
+    const { data } = await db.from('news_posts').select('id').eq('slug', slug).maybeSingle();
+    if (!data || (ignoreId && data.id === ignoreId)) return slug;
+  }
+  return `${base}-${Date.now().toString(36)}`;
+}
+
+export async function saveNewsPost(id: string | null, input: NewsPostInput) {
+  await requireAdmin();
+  const patch = cleanNewsInput(input);
+  if (!patch.title) return { error: 'A title is required' };
+  if (patch.status === 'published' && !patch.body && !patch.summary) {
+    return { error: 'A published post needs a body or a summary' };
+  }
+  const slug = await uniqueSlug(patch.slug, id ?? undefined);
+  const row: Record<string, unknown> = {
+    ...patch,
+    slug,
+    published_at: patch.status === 'published' ? new Date().toISOString() : null,
+    updated_at: new Date().toISOString(),
+  };
+  if (id) {
+    // Keep the original published_at and origin when editing an existing post
+    // (curated drafts stay curated — only the admin's edits change).
+    const { data: existing } = await db
+      .from('news_posts')
+      .select('published_at, origin')
+      .eq('id', id)
+      .single();
+    if (existing?.published_at && patch.status === 'published') row.published_at = existing.published_at;
+    if (existing?.origin) row.origin = existing.origin;
+    const { error } = await db.from('news_posts').update(row).eq('id', id);
+    if (error) return { error: error.message };
+  } else {
+    row.origin = 'original';
+    const { error } = await db.from('news_posts').insert(row);
+    if (error) return { error: error.message };
+  }
+  revalidatePath('/admin/news');
+  revalidatePath('/news');
+  return { ok: true, slug };
+}
+
+export async function setNewsPostStatus(id: string, status: 'draft' | 'published') {
+  await requireAdmin();
+  const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
+  if (status === 'published') {
+    const { data: existing } = await db.from('news_posts').select('published_at').eq('id', id).single();
+    if (!existing?.published_at) patch.published_at = new Date().toISOString();
+  }
+  const { error } = await db.from('news_posts').update(patch).eq('id', id);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/news');
+  revalidatePath('/news');
+  return { ok: true };
+}
+
+export async function deleteNewsPost(id: string) {
+  await requireAdmin();
+  const { error } = await db.from('news_posts').delete().eq('id', id);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/news');
+  revalidatePath('/news');
   return { ok: true };
 }

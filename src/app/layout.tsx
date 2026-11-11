@@ -96,6 +96,7 @@ function Footer() {
               <Link href='/quiz'>Find my grants</Link>
               <Link href='/pricing'>Pricing</Link>
               <Link href='/dashboard'>Dashboard</Link>
+              <Link href='/news'>News</Link>
             </nav>
           </div>
           <div className='flex flex-col gap-2'>
