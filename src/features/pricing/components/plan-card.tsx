@@ -16,9 +16,10 @@ function isSubscription(plan: PlanDef): plan is (typeof BRAND.plans)[number] {
 }
 
 /**
- * One pricing card. When the matching Stripe price exists in the database
- * (Step 4 done), the button opens Stripe Checkout; until then it sends the
- * visitor to sign up for the free account first.
+ * One pricing card. When the matching Stripe price exists (from the
+ * products table, or live from Stripe when the table has not synced yet),
+ * the button opens Stripe Checkout; when no price is found at all it
+ * sends the visitor to sign up for the free account first.
  */
 export function PlanCard({
   plan,

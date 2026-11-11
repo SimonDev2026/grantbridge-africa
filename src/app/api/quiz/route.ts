@@ -2,14 +2,17 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
+import { getSession } from '@/features/account/controllers/get-session';
+import { quizAnswersToProfile } from '@/features/profile/quiz-to-profile';
 import { sendCapiEvent } from '@/libs/meta/capi';
 import { hasMarketingConsent } from '@/libs/meta/consent';
 import { clientIp, RATE_LIMITS, rateLimited, tooManyRequests } from '@/libs/rate-limit';
 import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
+import { createSupabaseServerClient } from '@/libs/supabase/supabase-server-client';
 
 const Body = z.object({
   answers: z.object({
-    applicant_type: z.string(), registration_type: z.string().optional(), country: z.string(),
+    org_name: z.string().max(120).optional(), applicant_type: z.string(), registration_type: z.string().optional(), country: z.string(),
     description: z.string().max(240), sector: z.string(), beneficiaries: z.string(),
     funding_need: z.string(), annual_budget: z.string(), stage: z.string(),
   }),
@@ -35,6 +38,24 @@ export async function POST(req: NextRequest) {
     utm: b.utm ?? null, fbp: b.fbp ?? null, fbc: b.fbc ?? null,
   });
   if (error) return Response.json({ error: error.message }, { status: 500 });
+
+  // A signed-in user unlocking also gets their profile saved from the quiz
+  // answers (same save the quiz completion does). Finishing the quiz used
+  // to write only the quiz_lead row, leaving /profile empty and the
+  // checkout gate looping back to the quiz. A failed profile save never
+  // fails the unlock itself.
+  try {
+    const session = await getSession();
+    if (session?.user && b.answers.org_name) {
+      const supabase = (await createSupabaseServerClient()) as any;
+      await supabase.from('profiles').upsert(
+        { user_id: session.user.id, ...quizAnswersToProfile({ ...b.answers, org_name: b.answers.org_name ?? '', registration_type: b.answers.registration_type ?? '' }) },
+        { onConflict: 'user_id' },
+      );
+    }
+  } catch {
+    /* profile save is best-effort here */
+  }
 
   // Server-side Meta event only when the visitor consented to measurement
   // (the gb_consent cookie mirrors the browser consent banner). The lead

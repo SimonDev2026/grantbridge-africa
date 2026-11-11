@@ -26,6 +26,7 @@ export function ResultsGate({
   unlocking,
   unlockError,
   onUnlock,
+  signedIn,
 }: {
   matches: GrantCardData[];
   matchError: string;
@@ -39,6 +40,8 @@ export function ResultsGate({
   unlocking: boolean;
   unlockError: string;
   onUnlock: (e: React.FormEvent) => void;
+  /** True when the visitor is signed in (read server-side by the quiz page). */
+  signedIn: boolean;
 }) {
   const top3 = matches.slice(0, 3);
   const rest = matches.slice(3);
@@ -86,7 +89,7 @@ export function ResultsGate({
 
       {rest.length > 0 && (
         <div className='mt-8'>
-          {!unlocked ? (
+          {!unlocked && !signedIn ? (
             <div className='relative'>
               <div className='grid gap-4 opacity-40 blur-sm md:grid-cols-3' aria-hidden>
                 {rest.slice(0, 3).map((g) => (
@@ -149,15 +152,35 @@ export function ResultsGate({
       )}
 
       <div className='mt-10 rounded-2xl bg-brand-greenSoft p-6 text-center'>
-        <h2>Save these matches and get AI drafts</h2>
-        <p className='mx-auto mt-2 max-w-xl text-sm text-brand-muted'>
-          Create your free account to save matches, track deadlines, and draft applications.
-        </p>
-        <div className='mt-4'>
-          <Button variant='brand' asChild>
-            <Link href='/signup'>Create your free account →</Link>
-          </Button>
-        </div>
+        {signedIn ? (
+          <>
+            <h2>Your matches are saved to your account</h2>
+            <p className='mx-auto mt-2 max-w-xl text-sm text-brand-muted'>
+              Your profile is filled in from these answers. Pick a plan to unlock AI drafts
+              for every match.
+            </p>
+            <div className='mt-4 flex flex-wrap justify-center gap-3'>
+              <Button variant='brand' asChild>
+                <Link href='/pricing'>See plans →</Link>
+              </Button>
+              <Button variant='outline' asChild>
+                <Link href='/dashboard'>Go to your dashboard →</Link>
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2>Save these matches and get AI drafts</h2>
+            <p className='mx-auto mt-2 max-w-xl text-sm text-brand-muted'>
+              Create your free account to save matches, track deadlines, and draft applications.
+            </p>
+            <div className='mt-4'>
+              <Button variant='brand' asChild>
+                <Link href='/signup'>Create your free account →</Link>
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
