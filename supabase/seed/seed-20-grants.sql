@@ -6,7 +6,11 @@
 -- the funder's own official website (or, where noted in README.md, against
 -- the funder's own published documents). Nothing was invented: any detail
 -- that could not be verified is NULL.
--- Embeddings are NULL until the collector's embed step runs.
+-- Embeddings are NULL until the collector's embed step runs (daily 03:00 UTC
+-- workflow) or the admin clicks "Backfill embeddings" on /admin. Matching
+-- still works without vectors (match_grants() falls back to the
+-- sectors/beneficiaries/amount/urgency score), but the vector ranking only
+-- applies once embeddings exist — do NOT fake embedding values here.
 -- Idempotent: re-running this file inserts nothing twice (funders are
 -- guarded by name, grants by official_url).
 -- DO NOT run against production without a human review of README.md.

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { isAdmin, reviewGrant } from '@/app/admin/actions';
+import { BackfillEmbeddingsButton } from '@/app/admin/backfill-button';
 import { Button } from '@/components/ui/button';
 import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
 
@@ -10,7 +11,7 @@ const db = supabaseAdminClient as any;
 export default async function AdminPage() {
   if (!(await isAdmin())) redirect('/dashboard');
 
-  const [{ data: sources }, { data: queue }, { count: userCount }, { data: subs }] = await Promise.all([
+  const [{ data: sources }, { data: queue }, { count: userCount }, { data: subs }, { count: missingEmbeddings }] = await Promise.all([
     db.from('sources').select('id, name, url, last_run, last_ok, active').order('name'),
     db
       .from('grants')
@@ -23,6 +24,11 @@ export default async function AdminPage() {
       .from('subscriptions')
       .select('status, prices(unit_amount, interval, products(name))')
       .in('status', ['active', 'trialing']),
+    db
+      .from('grants')
+      .select('id', { count: 'exact', head: true })
+      .eq('approved', true)
+      .is('embedding', null),
   ]);
 
   const mrr = (subs ?? []).reduce((sum: number, s: any) => {
@@ -51,6 +57,18 @@ export default async function AdminPage() {
             <div className='text-sm text-brand-muted'>{s.label}</div>
           </div>
         ))}
+      </section>
+
+      <section>
+        <h2>Matching</h2>
+        <p className='mt-1 text-sm text-brand-muted'>
+          {(missingEmbeddings ?? 0) === 0
+            ? 'Every approved grant has a matching vector — the vector score is active.'
+            : `${missingEmbeddings} approved grant${missingEmbeddings === 1 ? '' : 's'} ${missingEmbeddings === 1 ? 'has' : 'have'} no matching vector yet. Matching still works without vectors (fallback score), but the vector ranking only applies after a backfill. The collector embeds new grants on its daily run; this button embeds the missing ones now.`}
+        </p>
+        <div className='mt-4'>
+          <BackfillEmbeddingsButton />
+        </div>
       </section>
 
       <section>

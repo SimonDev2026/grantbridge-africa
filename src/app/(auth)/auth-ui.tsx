@@ -45,20 +45,32 @@ export function AuthUI({
   signInWithOAuth,
   signUpWithEmailPassword,
   signInWithEmailPassword,
+  resendConfirmationEmail,
 }: {
   mode: 'login' | 'signup';
   signInWithOAuth: (provider: 'google', next?: string) => Promise<ActionResponse>;
   signUpWithEmailPassword: (email: string, password: string) => Promise<ActionResponse>;
   signInWithEmailPassword: (email: string, password: string) => Promise<ActionResponse>;
+  resendConfirmationEmail: (email: string) => Promise<ActionResponse>;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(null);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+
+  async function handleResend(email: string) {
+    setResendState('sending');
+    const response = await resendConfirmationEmail(email);
+    setResendState(response?.error ? 'error' : 'sent');
+  }
 
   async function handleEmailSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setUnconfirmedEmail(null);
+    setResendState('idle');
     const form = event.target as HTMLFormElement;
     const email = (form['email'].value as string).trim();
     const password = form['password'].value as string;
@@ -87,7 +99,13 @@ export function AuthUI({
         : await signInWithEmailPassword(email, password);
 
     if (response?.error) {
-      setError(friendlyAuthError(response.error.message ?? ''));
+      const message = response.error.message ?? '';
+      setError(friendlyAuthError(message));
+      // Unconfirmed account on login: offer a fresh confirmation link
+      // (the first link may have expired or gone to the wrong place).
+      if (mode === 'login' && /email not confirmed/i.test(message)) {
+        setUnconfirmedEmail(email);
+      }
       setPending(false);
       return;
     }
@@ -129,6 +147,25 @@ export function AuthUI({
             We sent a confirmation link to <strong>{confirmationSentTo}</strong>. Click it, and
             you will land straight on the quiz to find your grants.
           </p>
+          <div className='mt-4'>
+            <button
+              type='button'
+              onClick={() => handleResend(confirmationSentTo)}
+              disabled={resendState === 'sending'}
+              className='font-semibold text-brand-green hover:underline disabled:opacity-50'
+            >
+              {resendState === 'sent'
+                ? 'Confirmation email sent again ✓'
+                : resendState === 'sending'
+                  ? 'Sending…'
+                  : 'Didn’t get the email? Send it again'}
+            </button>
+            {resendState === 'error' && (
+              <p className='mt-2 text-sm text-red-700'>
+                Couldn’t resend the email — please try again in a minute.
+              </p>
+            )}
+          </div>
           <p className='mt-4 text-sm text-brand-muted'>
             Already confirmed?{' '}
             <Link href='/login' className='font-semibold text-brand-green hover:underline'>
@@ -190,6 +227,29 @@ export function AuthUI({
 
           {error && (
             <p className='rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700'>{error}</p>
+          )}
+
+          {unconfirmedEmail && (
+            <div className='rounded-lg bg-brand-sunSoft px-3 py-2 text-sm text-brand-ink'>
+              Your email is not confirmed yet.{' '}
+              <button
+                type='button'
+                onClick={() => handleResend(unconfirmedEmail)}
+                disabled={resendState === 'sending'}
+                className='font-semibold text-brand-green hover:underline disabled:opacity-50'
+              >
+                {resendState === 'sent'
+                  ? 'Confirmation email sent ✓ — check your inbox'
+                  : resendState === 'sending'
+                    ? 'Sending…'
+                    : 'Send a fresh confirmation link'}
+              </button>
+              {resendState === 'error' && (
+                <span className='block text-red-700'>
+                  Couldn’t resend the email — please try again in a minute.
+                </span>
+              )}
+            </div>
           )}
 
           <Button type='submit' variant='brand' size='lg' className='mt-2 w-full' disabled={pending}>

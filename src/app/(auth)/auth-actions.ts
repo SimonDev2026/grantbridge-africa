@@ -91,6 +91,31 @@ export async function signInWithEmailPassword(
   return redirect(subscription ? '/account' : '/dashboard');
 }
 
+/**
+ * Re-send the sign-up confirmation email to an address that has not
+ * confirmed yet (for example when the first link expired or went to the
+ * wrong place). Safe to call for an already-confirmed address — Supabase
+ * simply does nothing harmful. The link lands on the quiz via /auth/callback.
+ */
+export async function resendConfirmationEmail(email: string): Promise<ActionResponse> {
+  const supabase = await createSupabaseServerClient();
+
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: {
+      emailRedirectTo: getURL('/auth/callback?next=/quiz'),
+    },
+  });
+
+  if (error) {
+    console.error(error);
+    return { data: null, error: error };
+  }
+
+  return { data: { resent: true }, error: null };
+}
+
 export async function signOut(): Promise<ActionResponse> {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signOut();
