@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { upsertUserSubscription } from '@/features/account/controllers/upsert-user-subscription';
 import { upsertPrice } from '@/features/pricing/controllers/upsert-price';
 import { upsertProduct } from '@/features/pricing/controllers/upsert-product';
+import { resolveOneTimePurchases } from '@/features/pricing/webhook-purchases';
 import { notifyAdminNewOrder } from '@/features/service-orders/notify';
 import { sendCapiEvent } from '@/libs/meta/capi';
 import { getStripeAdmin } from '@/libs/stripe/stripe-admin';
@@ -77,15 +78,28 @@ export async function POST(req: Request) {
 
           if (checkoutSession.mode === 'payment') {
             // One-time purchases: draft credits or human services.
+            // Routing by product metadata lives in resolveOneTimePurchases()
+            // (unit-tested, Step 10); this block only performs the actions.
             const items = await getStripeAdmin().checkout.sessions.listLineItems(checkoutSession.id, { expand: ['data.price.product'] });
-            for (const li of items.data) {
-              const md = (li.price?.product as Stripe.Product).metadata;
-              if (md.kind === 'draft_credit')
-                await (supabaseAdminClient as any).rpc('add_draft_credits', { p_user: checkoutUserId, p_n: Number(md.credits || 1) * (li.quantity || 1) });
-              if (md.kind === 'service') {
+            const actions = resolveOneTimePurchases(
+              items.data.map((li) => ({
+                metadata: (li.price?.product as Stripe.Product)?.metadata ?? null,
+                quantity: li.quantity ?? 1,
+              })),
+              {
+                userId: checkoutUserId,
+                sessionId: checkoutSession.id,
+                grantId: checkoutSession.metadata?.grant_id || null,
+                amountTotalCents: checkoutSession.amount_total ?? null,
+              },
+            );
+            for (const action of actions) {
+              if (action.kind === 'draft_credit')
+                await (supabaseAdminClient as any).rpc(action.rpc, action.rpcArgs);
+              if (action.kind === 'service') {
                 const { data: order } = await (supabaseAdminClient as any)
-                  .from('service_requests')
-                  .insert({ user_id: checkoutUserId, package: md.package, stripe_session_id: checkoutSession.id, grant_id: checkoutSession.metadata?.grant_id || null, amount_paid_cents: checkoutSession.amount_total ?? null, currency: 'usd', status: 'paid' })
+                  .from(action.insert.table)
+                  .insert(action.insert.row)
                   .select('id, package, amount_paid_cents')
                   .single();
                 // Email the owner (no-op until Resend is configured); never break the webhook.

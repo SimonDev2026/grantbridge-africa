@@ -15,7 +15,12 @@
     "supabase:link": "env-cmd -f ./.env.local supabase link --project-ref UPDATE_THIS_WITH_YOUR_SUPABASE_PROJECT_ID",
     "migration:new": "supabase migration new",
     "migration:up": "supabase migration up --linked --debug && npm run generate-types",
-    "migration:squash": "supabase migration squash --linked"
+    "migration:squash": "supabase migration squash --linked",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "ai-quality": "node scripts/ai-quality-test.mjs",
+    "ai-quality:self-test": "node scripts/ai-quality-test.mjs --self-test"
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.2",
@@ -49,6 +54,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@types/react": "19.0.4",
     "@types/react-dom": "19.0.2",
     "autoprefixer": "^10.4.20",
@@ -63,7 +69,8 @@
     "prettier": "^2.8.8",
     "prettier-plugin-tailwindcss": "^0.3.0",
     "supabase": "^1.226.4",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^5.1.0"
   },
   "overrides": {
     "@types/react": "19.0.4",

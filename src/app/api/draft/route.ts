@@ -1,13 +1,12 @@
 // POST /api/draft { grantId } — drafts every document the funder asks for, using the user's profile
 // and uploaded documents. Paid plans only (check the subscriptions table from the starter repo).
+import { hasPlanDraftAllowance } from '@/features/writer/draft-quota';
 import { chat, parseJson } from '@/libs/ai/client';
 import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
 import { createSupabaseServerClient } from '@/libs/supabase/supabase-server-client';
 import { DRAFT_APPLICATION_PROMPT } from '@/prompts/draft-application';
 
 const db = supabaseAdminClient as any;
-// Drafts included per month by plan (product names in Stripe). Pay-per-application credits: see migration 20261111000100.
-const MONTHLY_LIMIT: Record<string, number> = { seeker: 1, writer: 10, pro: 100000 };
 
 export async function POST(req: Request) {
   const { grantId, force } = await req.json();
@@ -35,7 +34,7 @@ export async function POST(req: Request) {
   const plan = (sub?.prices?.products?.name ?? '').toLowerCase();
   const since = new Date(); since.setDate(1);
   const { count } = await db.from('drafts').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('created_at', since.toISOString());
-  const withinPlan = (MONTHLY_LIMIT[plan] ?? 0) > (count ?? 0);
+  const withinPlan = hasPlanDraftAllowance(plan, count ?? 0);
   if (!withinPlan) {
     // No plan allowance left: use a pay-per-application credit ($29 one-time Stripe price) if the user has one.
     const { data: used } = await db.rpc('use_draft_credit', { p_user: user.id });
