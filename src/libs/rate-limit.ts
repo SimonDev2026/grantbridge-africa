@@ -27,6 +27,8 @@ export const RATE_LIMITS = {
   quizUnlock: { max: 10, windowMs: HOUR },
   /** Contact / careers / support forms: each send costs Resend quota. */
   formSend: { max: 5, windowMs: HOUR },
+  /** Unsubscribe form: one address per attempt, generous but not open-ended. */
+  unsubscribe: { max: 10, windowMs: HOUR },
   /** Full quiz match run (DB-heavy deterministic scoring). */
   quizResults: { max: 20, windowMs: HOUR },
   /** Mid-quiz "matches so far" count — called as the user answers. */

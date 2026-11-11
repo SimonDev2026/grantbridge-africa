@@ -5,7 +5,11 @@ import { revalidatePath } from 'next/cache';
 import { getSession } from '@/features/account/controllers/get-session';
 import { notifyAdminIntakeComplete, notifyClient } from '@/features/service-orders/notify';
 import { chat, parseJson } from '@/libs/ai/client';
-import { slugify } from '@/libs/news/rss';
+import { getSubscriberEmails } from '@/libs/email/audience';
+import { renderCampaignEmail } from '@/libs/email/render';
+import { type CampaignSendResult,EMAIL_FROM, sendCampaignToRecipients } from '@/libs/email/send-campaign';
+import { plainTextFromHtml, slugify } from '@/libs/news/rss';
+import { getResendClient } from '@/libs/resend/resend-client';
 import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
 import { createSupabaseServerClient } from '@/libs/supabase/supabase-server-client';
 import { DRAFT_APPLICATION_PROMPT } from '@/prompts/draft-application';
@@ -568,4 +572,131 @@ export async function deleteCmsTestimonial(id: string) {
   revalidatePath('/admin/cms');
   revalidatePath('/');
   return { ok: true };
+}
+
+// ---------- Email marketing ----------
+export type EmailCampaignInput = {
+  subject: string;
+  body: string;
+};
+
+export async function saveEmailCampaign(id: string | null, input: EmailCampaignInput) {
+  await requireAdmin();
+  const subject = (input.subject ?? '').trim();
+  const body = (input.body ?? '').trim();
+  if (!subject) return { error: 'A subject is required' };
+  if (!body) return { error: 'A body is required' };
+  if (id) {
+    const { data: existing } = await db
+      .from('email_campaigns')
+      .select('status')
+      .eq('id', id)
+      .single();
+    if (!existing) return { error: 'Campaign not found' };
+    if (existing.status === 'sent') return { error: 'Sent campaigns cannot be edited' };
+  }
+  const row = {
+    subject,
+    body_html: body,
+    body_text: plainTextFromHtml(body),
+    updated_at: new Date().toISOString(),
+  };
+  const { data, error } = id
+    ? await db.from('email_campaigns').update(row).eq('id', id).select('id').single()
+    : await db.from('email_campaigns').insert(row).select('id').single();
+  if (error) return { error: error.message };
+  revalidatePath('/admin/email');
+  return { ok: true, id: data.id };
+}
+
+export async function deleteEmailCampaign(id: string) {
+  await requireAdmin();
+  const { data: existing } = await db
+    .from('email_campaigns')
+    .select('status')
+    .eq('id', id)
+    .single();
+  if (!existing) return { error: 'Campaign not found' };
+  if (existing.status === 'sent') {
+    return { error: 'Sent campaigns are kept as the audit trail and cannot be deleted' };
+  }
+  const { error } = await db.from('email_campaigns').delete().eq('id', id);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/email');
+  return { ok: true };
+}
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@grantbridgeafrica.com';
+
+/** Send one test copy to the admin only — never touches the subscriber list. */
+export async function sendEmailTest(
+  id: string
+): Promise<{ ok: true; to: string } | { error: string }> {
+  await requireAdmin();
+  const { data: campaign } = await db
+    .from('email_campaigns')
+    .select('subject, body_html')
+    .eq('id', id)
+    .single();
+  if (!campaign) return { error: 'Campaign not found' };
+  if (!process.env.RESEND_API_KEY) return { error: 'Resend is not configured (RESEND_API_KEY is missing)' };
+  const { html, text } = renderCampaignEmail(campaign.body_html, ADMIN_EMAIL);
+  const { error } = await getResendClient().emails.send({
+    from: EMAIL_FROM,
+    to: ADMIN_EMAIL,
+    subject: `[Test] ${campaign.subject}`,
+    html,
+    text,
+  });
+  if (error) return { error: error.message ?? 'Resend returned an error' };
+  return { ok: true, to: ADMIN_EMAIL };
+}
+
+/**
+ * Send a draft campaign to every subscriber (quiz_leads with marketing
+ * consent, minus unsubscribes). Per-recipient results land in email_sends;
+ * a re-send skips addresses already recorded as sent for this campaign.
+ */
+export async function sendEmailCampaign(
+  id: string
+): Promise<
+  | { ok: true; sent: number; failed: number; skipped: number; recipients: number }
+  | { error: string }
+> {
+  await requireAdmin();
+  const { data: campaign } = await db
+    .from('email_campaigns')
+    .select('id, subject, body_html, status')
+    .eq('id', id)
+    .single();
+  if (!campaign) return { error: 'Campaign not found' };
+  if (campaign.status === 'sent') return { error: 'This campaign was already sent' };
+  const recipients = await getSubscriberEmails();
+  if (recipients.length === 0) {
+    return { error: 'No subscribers yet — nobody has taken the quiz with the marketing box ticked' };
+  }
+  let result: CampaignSendResult;
+  try {
+    result = await sendCampaignToRecipients(
+      { id: campaign.id, subject: campaign.subject, body_html: campaign.body_html },
+      recipients
+    );
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  const { error } = await db
+    .from('email_campaigns')
+    .update({
+      status: 'sent',
+      sent_at: new Date().toISOString(),
+      recipient_count: recipients.length,
+      sent_count: result.sent,
+      failed_count: result.failed,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/email');
+  revalidatePath(`/admin/email/${id}`);
+  return { ok: true, ...result, recipients: recipients.length };
 }
