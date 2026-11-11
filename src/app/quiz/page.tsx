@@ -1,9 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 
-import { GrantCard, GrantCardData } from '@/components/grant-card';
+import type { GrantCardData } from '@/components/grant-card';
+import {
+  AlmostReadyInterstitial,
+  CompletionScreen,
+  MapInterstitial,
+  ScanInterstitial,
+} from '@/components/quiz/interstitials';
+import { QuizProgress, StepShell, WhyThisMatters } from '@/components/quiz/quiz-chrome';
+import { ResultsGate } from '@/components/quiz/results-gate';
+import type { PreviewResult, QuizStats } from '@/components/quiz/types';
 import { Button } from '@/components/ui/button';
 import {
   AFRICAN_COUNTRIES,
@@ -30,6 +38,8 @@ type Answers = {
   stage: string;
 };
 
+// The 9 quiz steps and 5 applicant types are unchanged — the interstitials
+// wrap around this flow, they do not replace any step.
 const STEPS: {
   key: keyof Answers;
   title: string;
@@ -48,6 +58,8 @@ const STEPS: {
   { key: 'stage', title: 'What stage is your project at?', why: 'Some funders back new ideas and others only fund proven work.', type: 'options', options: [...PROJECT_STAGES] },
 ];
 
+// Honest status messages for the loading screen — what is actually happening,
+// no fake percentages.
 const MATCH_STEPS = [
   'Checking 54 countries against funder eligibility rules…',
   'Reading grant calls for your sector…',
@@ -55,48 +67,136 @@ const MATCH_STEPS = [
   'Preparing your shortlist…',
 ];
 
+type View =
+  | 'question'
+  | 'map'
+  | 'scan'
+  | 'almost'
+  | 'done'
+  | 'matching'
+  | 'results';
+
+const EMPTY_ANSWERS: Answers = {
+  applicant_type: '',
+  registration_type: '',
+  country: '',
+  description: '',
+  sector: '',
+  beneficiaries: '',
+  funding_need: '',
+  annual_budget: '',
+  stage: '',
+};
+
+function labelFor(
+  options: readonly { value: string; label: string }[],
+  value: string,
+): string {
+  return options.find((o) => o.value === value)?.label ?? value;
+}
+
 export default function QuizPage() {
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Answers>({
-    applicant_type: '',
-    registration_type: '',
-    country: '',
-    description: '',
-    sector: '',
-    beneficiaries: '',
-    funding_need: '',
-    annual_budget: '',
-    stage: '',
-  });
-  const [phase, setPhase] = useState<'quiz' | 'matching' | 'results'>('quiz');
+  const [answers, setAnswers] = useState<Answers>(EMPTY_ANSWERS);
+  const [view, setView] = useState<View>('question');
   const [matchRow, setMatchRow] = useState(0);
   const [matches, setMatches] = useState<GrantCardData[]>([]);
   const [matchError, setMatchError] = useState('');
   const [email, setEmail] = useState('');
+  const [marketing, setMarketing] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [unlockError, setUnlockError] = useState('');
   const [unlocking, setUnlocking] = useState(false);
+  const [stats, setStats] = useState<QuizStats | null>(null);
+  const [preview, setPreview] = useState<PreviewResult | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Skip the registration step for individuals.
   const visibleSteps = STEPS.filter(
-    (s) => !(s.key === 'registration_type' && answers.applicant_type === 'individual')
+    (s) => !(s.key === 'registration_type' && answers.applicant_type === 'individual'),
   );
   const current = visibleSteps[step];
-  const currentValue = answers[current.key];
+  const currentValue = current ? answers[current.key] : '';
   const canNext = currentValue.trim().length > 0;
+  const answered = visibleSteps.filter((s) => answers[s.key].trim().length > 0).length;
+  const total = visibleSteps.length;
+
+  // Live stats for the interstitials (real open-grant / funder counts).
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/quiz-results/stats')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d && !d.error) setStats(d);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Mid-quiz scan: count matches from the answers given so far.
+  useEffect(() => {
+    if (view !== 'scan') return;
+    let cancelled = false;
+    setPreviewLoading(true);
+    fetch('/api/quiz-results/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(answers),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d && !d.error) setPreview(d);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
 
   useEffect(() => {
-    if (phase !== 'matching') return;
+    if (view !== 'matching') return;
     const t = setInterval(() => setMatchRow((r) => Math.min(r + 1, MATCH_STEPS.length - 1)), 900);
     return () => clearInterval(t);
-  }, [phase]);
+  }, [view]);
 
   function setAnswer(key: keyof Answers, value: string) {
     setAnswers((a) => ({ ...a, [key]: value }));
   }
 
+  /** Forward from a question: interstitials sit between steps, keyed by step. */
+  function next() {
+    if (!current) return;
+    if (current.key === 'applicant_type') return setView('map');
+    if (current.key === 'sector') return setView('scan');
+    if (current.key === 'annual_budget') return setView('almost');
+    if (step >= visibleSteps.length - 1) return setView('done');
+    setStep(step + 1);
+  }
+
+  /** Forward from an interstitial: move to the next question. */
+  function continueFromInterstitial() {
+    setStep((s) => Math.min(s + 1, visibleSteps.length - 1));
+    setView('question');
+  }
+
+  /** Back from step 2 onward; interstitials step back to their question. */
+  function back() {
+    if (view === 'map' || view === 'scan' || view === 'almost' || view === 'done') {
+      setView('question');
+      return;
+    }
+    if (step === 0) window.location.href = '/';
+    else setStep(step - 1);
+  }
+
   async function finish() {
-    setPhase('matching');
+    setView('matching');
     setMatchRow(0);
     try {
       const res = await fetch('/api/quiz-results', {
@@ -112,7 +212,7 @@ export default function QuizPage() {
       setMatchError((e as Error).message);
     }
     // Keep the animation honest and short (≤ 20 s, here ~4 s).
-    setTimeout(() => setPhase('results'), 3600);
+    setTimeout(() => setView('results'), 3600);
   }
 
   async function unlock(e: React.FormEvent) {
@@ -126,7 +226,7 @@ export default function QuizPage() {
       const res = await fetch('/api/quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers, email, marketingConsent: true, eventId, fbp, fbc }),
+        body: JSON.stringify({ answers, email, marketingConsent: marketing, eventId, fbp, fbc }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Could not save your email');
@@ -139,17 +239,23 @@ export default function QuizPage() {
     }
   }
 
-  if (phase === 'matching') {
+  const progressLabel =
+    view === 'question' ? `Step ${step + 1} of ${total}` : `${answered} of ${total} answered`;
+
+  if (view === 'matching') {
     return (
-      <div className='mx-auto max-w-xl py-16 text-center'>
-        <h1>Finding your grants…</h1>
+      <StepShell>
+        <QuizProgress answered={total} total={total} label='All questions answered' />
+        <h1 className='mt-8 text-center text-3xl lg:text-4xl'>Finding your grants…</h1>
         <div className='mt-8 flex flex-col gap-3 text-left'>
           {MATCH_STEPS.map((s, i) => (
             <div
               key={s}
               className={cn(
                 'rounded-xl border p-4 text-sm',
-                i <= matchRow ? 'border-brand-green bg-brand-greenSoft text-brand-ink' : 'border-brand-line bg-white text-brand-muted'
+                i <= matchRow
+                  ? 'border-brand-green bg-brand-greenSoft text-brand-ink'
+                  : 'border-brand-line bg-white text-brand-muted',
               )}
             >
               {i <= matchRow ? '✓ ' : '○ '}
@@ -157,110 +263,94 @@ export default function QuizPage() {
             </div>
           ))}
         </div>
-        <p className='mt-6 text-sm text-brand-muted'>
+        <p className='mt-6 text-center text-sm text-brand-muted'>
           This is real work — we check every open grant against your answers.
         </p>
-      </div>
+      </StepShell>
     );
   }
 
-  if (phase === 'results') {
-    const top3 = matches.slice(0, 3);
-    const rest = matches.slice(3);
+  if (view === 'results') {
+    const totalValueUsd = matches.reduce(
+      (sum, g) => sum + (typeof g.amount_usd_max === 'number' ? g.amount_usd_max : 0),
+      0,
+    );
     return (
-      <div className='mx-auto max-w-4xl py-10'>
-        <h1 className='text-center'>Your matches</h1>
-        <p className='mt-2 text-center text-brand-muted'>
-          {matches.length > 0
-            ? `${matches.length} grant${matches.length === 1 ? '' : 's'} match your organisation, ranked by fit.`
-            : 'No open grants match your answers right now — new grants are added daily, and we will email you when one fits.'}
-        </p>
-        {matchError && <p className='mt-4 rounded-xl bg-red-50 p-4 text-center text-sm text-red-700'>{matchError}</p>}
+      <ResultsGate
+        matches={matches}
+        matchError={matchError}
+        totalValueUsd={totalValueUsd > 0 ? totalValueUsd : null}
+        email={email}
+        setEmail={setEmail}
+        marketing={marketing}
+        setMarketing={setMarketing}
+        unlocked={unlocked}
+        unlocking={unlocking}
+        unlockError={unlockError}
+        onUnlock={unlock}
+      />
+    );
+  }
 
-        {top3.length > 0 && (
-          <div className='mt-8 grid gap-4 md:grid-cols-3'>
-            {top3.map((g) => (
-              <GrantCard key={g.id} grant={g} />
-            ))}
-          </div>
-        )}
-
-        {rest.length > 0 && (
-          <div className='mt-8'>
-            {!unlocked ? (
-              <div className='relative'>
-                <div className='grid gap-4 opacity-40 blur-sm md:grid-cols-3' aria-hidden>
-                  {rest.slice(0, 3).map((g) => (
-                    <GrantCard key={g.id} grant={g} />
-                  ))}
-                </div>
-                <form
-                  onSubmit={unlock}
-                  className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-2xl bg-white/80 p-6 text-center'
-                >
-                  <h2 className='text-2xl'>See all {matches.length} matches</h2>
-                  <p className='max-w-md text-sm text-brand-muted'>
-                    Enter your email to unlock the full shortlist. We’ll also send you new matches
-                    weekly. No spam, unsubscribe any time.
-                  </p>
-                  <div className='flex w-full max-w-md flex-col gap-2 sm:flex-row'>
-                    <input
-                      type='email'
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder='you@organisation.org'
-                      className='min-h-11 flex-1 rounded-lg border border-brand-line bg-white px-3 text-base'
-                    />
-                    <Button type='submit' disabled={unlocking} variant='brand'>
-                      {unlocking ? 'Unlocking…' : 'Unlock my matches'}
-                    </Button>
-                  </div>
-                  {unlockError && <p className='text-sm text-red-600'>{unlockError}</p>}
-                </form>
-              </div>
-            ) : (
-              <div className='grid gap-4 md:grid-cols-3'>
-                {rest.map((g) => (
-                  <GrantCard key={g.id} grant={g} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className='mt-10 rounded-2xl bg-brand-greenSoft p-6 text-center'>
-          <h2>Save these matches and get AI drafts</h2>
-          <p className='mx-auto mt-2 max-w-xl text-sm text-brand-muted'>
-            Create your free account to save matches, track deadlines, and draft applications.
-          </p>
-          <div className='mt-4'>
-            <Button variant='brand' asChild>
-              <Link href='/signup'>Create your free account →</Link>
-            </Button>
-          </div>
-        </div>
+  if (view === 'map') {
+    return (
+      <div className='mx-auto w-full max-w-xl'>
+        <QuizProgress answered={answered} total={total} label={progressLabel} />
+        <MapInterstitial stats={stats} onBack={back} onContinue={continueFromInterstitial} />
       </div>
     );
   }
 
-  return (
-    <div className='mx-auto max-w-xl py-10'>
-      <div className='mb-2 flex items-center justify-between text-sm text-brand-muted'>
-        <span>
-          Step {step + 1} of {visibleSteps.length}
-        </span>
-        <span>{Math.round(((step + 1) / visibleSteps.length) * 100)}%</span>
-      </div>
-      <div className='h-2 overflow-hidden rounded-full bg-brand-line'>
-        <div
-          className='h-full rounded-full bg-brand-green transition-all'
-          style={{ width: `${((step + 1) / visibleSteps.length) * 100}%` }}
+  if (view === 'scan') {
+    return (
+      <div className='mx-auto w-full max-w-xl'>
+        <QuizProgress answered={answered} total={total} label={progressLabel} />
+        <ScanInterstitial
+          preview={preview}
+          previewLoading={previewLoading}
+          onBack={back}
+          onContinue={continueFromInterstitial}
         />
       </div>
+    );
+  }
+
+  if (view === 'almost') {
+    return (
+      <div className='mx-auto w-full max-w-xl'>
+        <QuizProgress answered={answered} total={total} label={progressLabel} />
+        <AlmostReadyInterstitial
+          stats={stats}
+          onBack={back}
+          onContinue={continueFromInterstitial}
+        />
+      </div>
+    );
+  }
+
+  if (view === 'done') {
+    const recap = [
+      { label: 'Applying as', value: labelFor(APPLICANT_TYPES, answers.applicant_type) },
+      { label: 'Country', value: answers.country },
+      { label: 'Focus', value: labelFor(SECTORS, answers.sector) },
+      { label: 'Funding need', value: labelFor(FUNDING_NEEDS, answers.funding_need) },
+    ].filter((r) => r.value);
+    return (
+      <div className='mx-auto w-full max-w-xl'>
+        <QuizProgress answered={answered} total={total} label={progressLabel} />
+        <CompletionScreen recap={recap} onSeeMatches={finish} onBack={back} />
+      </div>
+    );
+  }
+
+  if (!current) return null;
+
+  return (
+    <StepShell>
+      <QuizProgress answered={answered} total={total} label={progressLabel} />
 
       <h1 className='mt-8 text-3xl lg:text-4xl'>{current.title}</h1>
-      <p className='mt-2 text-brand-muted'>Why this matters: {current.why}</p>
+      <WhyThisMatters text={current.why} />
 
       <div className='mt-6 flex flex-col gap-3'>
         {current.type === 'options' &&
@@ -273,7 +363,7 @@ export default function QuizPage() {
                 'min-h-14 rounded-xl border p-4 text-left text-base font-medium',
                 currentValue === o.value
                   ? 'border-brand-green bg-brand-greenSoft text-brand-ink'
-                  : 'border-brand-line bg-white text-brand-ink hover:border-brand-green'
+                  : 'border-brand-line bg-white text-brand-ink hover:border-brand-green',
               )}
             >
               {o.label}
@@ -311,33 +401,19 @@ export default function QuizPage() {
       </div>
 
       <div className='mt-8 flex justify-between'>
-        <Button
-          variant='outline'
-          onClick={() => {
-            if (step === 0) window.location.href = '/';
-            else setStep(step - 1);
-          }}
-        >
-          ← Back
+        <Button variant='outline' onClick={back}>
+          {step === 0 ? '← Exit' : '← Back'}
         </Button>
         {step < visibleSteps.length - 1 ? (
-          <Button
-            disabled={!canNext}
-            variant='brand'
-            onClick={() => setStep(step + 1)}
-          >
+          <Button disabled={!canNext} variant='brand' onClick={next}>
             Continue →
           </Button>
         ) : (
-          <Button
-            disabled={!canNext}
-            variant='brand'
-            onClick={finish}
-          >
-            See my matches →
+          <Button disabled={!canNext} variant='brand' onClick={next}>
+            Finish →
           </Button>
         )}
       </div>
-    </div>
+    </StepShell>
   );
 }

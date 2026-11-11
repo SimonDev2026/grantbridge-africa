@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import { CookieSettingsButton } from '@/components/cookie-settings-button';
 import { Logo } from '@/components/logo';
+import { SiteChrome } from '@/components/site-chrome';
 import { Toaster } from '@/components/ui/toaster';
 import { BRAND } from '@/config/brand';
 import { ConsentBanner, MetaPixel } from '@/libs/meta/pixel';
@@ -44,13 +45,9 @@ export default function RootLayout({ children }: PropsWithChildren) {
     <html lang='en'>
       <body className={cn('font-sans antialiased', montserrat.variable, montserratAlternates.variable)}>
         <MetaPixel />
-        <div className='m-auto flex h-full max-w-[1440px] flex-col px-4'>
-          <AppBar />
-          <main className='relative flex-1'>
-            <div className='relative h-full'>{children}</div>
-          </main>
-          <Footer />
-        </div>
+        <SiteChrome header={<AppBar />} footer={<Footer />}>
+          {children}
+        </SiteChrome>
         <ConsentBanner />
         <Toaster />
         <Analytics />
@@ -64,17 +61,14 @@ async function AppBar() {
     <header className='flex items-center justify-between gap-4 py-5'>
       <Logo />
       <nav className='hidden items-center gap-6 text-sm font-medium text-brand-muted lg:flex'>
-        <Link href='/#how-it-works' className='hover:text-brand-green'>
-          How it works
-        </Link>
-        <Link href='/quiz' className='hover:text-brand-green'>
-          Find my grants
-        </Link>
         <Link href='/pricing' className='hover:text-brand-green'>
           Pricing
         </Link>
-        <Link href='/about-us' className='hover:text-brand-green'>
-          About
+        <Link href='/faq' className='hover:text-brand-green'>
+          FAQ
+        </Link>
+        <Link href='/contact' className='hover:text-brand-green'>
+          Contact
         </Link>
       </nav>
       <Navigation />
@@ -106,6 +100,7 @@ function Footer() {
             <div className='font-semibold text-brand-ink'>Company</div>
             <nav className='flex flex-col gap-2'>
               <Link href='/about-us'>About Us</Link>
+              <Link href='/careers'>Careers</Link>
               <Link href='/privacy'>Privacy</Link>
               <Link href='/terms'>Terms</Link>
             </nav>
@@ -114,7 +109,9 @@ function Footer() {
             <div className='font-semibold text-brand-ink'>Support</div>
             <nav className='flex flex-col gap-2'>
               <Link href='/support'>Get Support</Link>
-              <Link href={`mailto:${BRAND.contact.supportEmail}`}>Email us</Link>
+              <Link href='/faq'>FAQ</Link>
+              <Link href='/contact'>Contact us</Link>
+              <Link href='mailto:info@grantbridgeafrica.com'>Email us</Link>
               <Link href={BRAND.social.whatsappChannel} target='_blank' rel='noreferrer'>
                 WhatsApp channel
               </Link>

@@ -149,3 +149,75 @@
 .btn-shine:hover::after {
   animation: btn-shine-sweep 0.8s ease;
 }
+
+/* ---- Homepage motion (GrantBridge) ---- */
+
+/* Scroll reveal: elements start faded + lowered, settle in when visible. */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s ease;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .hero-word-swap,
+  .search-dropdown-enter {
+    animation: none !important;
+  }
+}
+
+/* Rotating hero word: new word slides up and fades in. */
+@keyframes hero-word-swap {
+  from {
+    opacity: 0;
+    transform: translateY(0.6em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.hero-word-swap {
+  display: inline-block;
+  animation: hero-word-swap 0.5s ease;
+}
+
+/* Live-search dropdown entrance. */
+@keyframes search-dropdown-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.search-dropdown-enter {
+  animation: search-dropdown-enter 0.18s ease;
+}
+
+/* Carousel cards glide when the window advances. */
+@keyframes carousel-card-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.carousel-card-in {
+  animation: carousel-card-in 0.45s ease;
+}
