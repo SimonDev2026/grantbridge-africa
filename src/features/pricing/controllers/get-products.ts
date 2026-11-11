@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/libs/supabase/supabase-server-client';
+import { ProductWithPrices } from '@/features/pricing/types';
 
 export async function getProducts() {
   const supabase = await createSupabaseServerClient();
@@ -15,5 +16,8 @@ export async function getProducts() {
     console.error(error.message);
   }
 
-  return data ?? [];
+  // The `.order('metadata->index')` JSON-path ordering collapses the
+  // query's inferred type to `never`, so assert the known shape: the
+  // select is `*, prices(*)`, which is exactly ProductWithPrices.
+  return (data ?? []) as ProductWithPrices[];
 }

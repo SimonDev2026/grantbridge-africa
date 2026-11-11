@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/libs/supabase/supabase-server-client';
+import { SubscriptionWithProduct } from '@/features/pricing/types';
 
 export async function getSubscription() {
   const supabase = await createSupabaseServerClient();
@@ -13,5 +14,7 @@ export async function getSubscription() {
     console.error(error);
   }
 
-  return data;
+  // The nested `prices(*, products(*))` select collapses the query's
+  // inferred type to `never`, so assert the known shape.
+  return data as SubscriptionWithProduct | null;
 }
