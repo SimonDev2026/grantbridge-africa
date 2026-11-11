@@ -3,7 +3,9 @@ import Stripe from 'stripe';
 import { upsertUserSubscription } from '@/features/account/controllers/upsert-user-subscription';
 import { upsertPrice } from '@/features/pricing/controllers/upsert-price';
 import { upsertProduct } from '@/features/pricing/controllers/upsert-product';
+import { sendCapiEvent } from '@/libs/meta/capi';
 import { getStripeAdmin } from '@/libs/stripe/stripe-admin';
+import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
 import { getEnvVar } from '@/utils/get-env-var';
 
 const relevantEvents = new Set([
@@ -15,6 +17,7 @@ const relevantEvents = new Set([
   'customer.subscription.created',
   'customer.subscription.updated',
   'customer.subscription.deleted',
+  'invoice.payment_failed',
 ]);
 
 export async function POST(req: Request) {
@@ -51,8 +54,16 @@ export async function POST(req: Request) {
             isCreateAction: false,
           });
           break;
+        case 'invoice.payment_failed': {
+          // TODO (Step 8): email the customer a link to /manage-subscription via Resend.
+          // Until the Resend key is set, Stripe's own failed-payment email covers this.
+          const invoice = event.data.object as Stripe.Invoice;
+          console.error('Stripe invoice payment failed', invoice.id, invoice.customer);
+          break;
+        }
         case 'checkout.session.completed':
           const checkoutSession = event.data.object as Stripe.Checkout.Session;
+          const checkoutUserId = checkoutSession.client_reference_id!;
 
           if (checkoutSession.mode === 'subscription') {
             const subscriptionId = checkoutSession.subscription;
@@ -62,6 +73,29 @@ export async function POST(req: Request) {
               isCreateAction: true,
             });
           }
+
+          if (checkoutSession.mode === 'payment') {
+            // One-time purchases: draft credits or human services.
+            const items = await getStripeAdmin().checkout.sessions.listLineItems(checkoutSession.id, { expand: ['data.price.product'] });
+            for (const li of items.data) {
+              const md = (li.price?.product as Stripe.Product).metadata;
+              if (md.kind === 'draft_credit')
+                await (supabaseAdminClient as any).rpc('add_draft_credits', { p_user: checkoutUserId, p_n: Number(md.credits || 1) * (li.quantity || 1) });
+              if (md.kind === 'service')
+                await (supabaseAdminClient as any).from('service_requests').insert({ user_id: checkoutUserId, package: md.package, stripe_session_id: checkoutSession.id, grant_id: checkoutSession.metadata?.grant_id || null });
+            }
+          }
+
+          await sendCapiEvent({
+            eventName: checkoutSession.mode === 'subscription' ? 'Subscribe' : 'Purchase',
+            eventId: checkoutSession.metadata?.event_id || checkoutSession.id,
+            email: checkoutSession.customer_details?.email,
+            externalId: checkoutUserId,
+            fbp: checkoutSession.metadata?.fbp || undefined,
+            fbc: checkoutSession.metadata?.fbc || undefined,
+            value: (checkoutSession.amount_total ?? 0) / 100,
+            currency: 'USD',
+          });
           break;
         default:
           throw new Error('Unhandled relevant event!');

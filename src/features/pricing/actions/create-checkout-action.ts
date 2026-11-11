@@ -11,7 +11,7 @@ import { sendCapiEvent } from '@/libs/meta/capi';
 import { getStripeAdmin } from '@/libs/stripe/stripe-admin';
 import { getURL } from '@/utils/get-url';
 
-export async function createCheckoutAction({ price, eventId, fbp, fbc }: { price: Price; eventId?: string; fbp?: string; fbc?: string }) {
+export async function createCheckoutAction({ price, eventId, fbp, fbc, grantId }: { price: Price; eventId?: string; fbp?: string; fbc?: string; grantId?: string }) {
   const session = await getSession();
   if (!session?.user) return redirect(`${getURL()}/signup`);
   if (!session.user.email) throw Error('Could not get email');
@@ -31,7 +31,7 @@ export async function createCheckoutAction({ price, eventId, fbp, fbc }: { price
     mode: price.type === 'recurring' ? 'subscription' : 'payment',
     allow_promotion_codes: true,
     client_reference_id: session.user.id,
-    metadata: { user_id: session.user.id, fbp: fbp ?? '', fbc: fbc ?? '', event_id: eventId ?? '' },
+    metadata: { user_id: session.user.id, fbp: fbp ?? '', fbc: fbc ?? '', event_id: eventId ?? '', grant_id: grantId ?? '' },
     success_url: `${getURL()}/dashboard?checkout=success`,
     cancel_url: `${getURL()}/pricing`,
   });
