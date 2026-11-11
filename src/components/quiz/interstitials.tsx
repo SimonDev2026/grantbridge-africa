@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { formatAmount,GrantCard } from '@/components/grant-card';
+import { WorldMap } from '@/components/quiz/world-map';
 import { Button } from '@/components/ui/button';
 
 import type { PreviewResult, QuizStats } from './types';
@@ -50,35 +51,6 @@ function InterstitialShell({
 /* a. After "who you are": "You are in the right place"                */
 /* ------------------------------------------------------------------ */
 
-/** Stylised Africa outline (decorative, not to scale) with funder dots. */
-function AfricaMap() {
-  return (
-    <svg
-      viewBox='0 0 240 240'
-      className='mx-auto h-56 w-auto sm:h-64'
-      role='img'
-      aria-label='Stylised map of Africa'
-    >
-      <path
-        d='M78 28 C95 18 120 20 138 30 C160 32 175 40 182 55 C190 70 200 82 198 96 C196 108 186 116 180 128 C176 146 172 162 164 178 C158 194 148 206 134 208 C122 210 110 202 104 190 C96 176 92 160 88 144 C84 128 78 116 66 108 C54 100 44 96 38 86 C32 76 30 64 38 54 C46 44 60 36 78 28 Z'
-        fill='#E7F3EC'
-        stroke='#0E6B4A'
-        strokeWidth='2'
-        strokeLinejoin='round'
-      />
-      {/* Madagascar */}
-      <ellipse cx='206' cy='176' rx='7' ry='18' fill='#E7F3EC' stroke='#0E6B4A' strokeWidth='1.5' transform='rotate(12 206 176)' />
-      {/* Decorative funder dots across the continent */}
-      <circle cx='70' cy='80' r='5' fill='#E8A33D' />
-      <circle cx='120' cy='60' r='5' fill='#0E6B4A' />
-      <circle cx='160' cy='110' r='5' fill='#E8A33D' />
-      <circle cx='110' cy='130' r='5' fill='#0E6B4A' />
-      <circle cx='140' cy='180' r='5' fill='#E8A33D' />
-      <circle cx='90' cy='160' r='5' fill='#0E6B4A' />
-    </svg>
-  );
-}
-
 export function MapInterstitial({
   stats,
   onBack,
@@ -99,20 +71,27 @@ export function MapInterstitial({
       continueLabel='Continue →'
     >
       <div className='rounded-2xl border border-brand-line bg-white p-4 sm:p-6'>
-        <AfricaMap />
         {highlights.length > 0 ? (
-          <div className='mt-4 flex flex-wrap justify-center gap-2'>
-            {highlights.map((h) => (
-              <span
-                key={h.id}
-                className='rounded-full border border-brand-line bg-brand-sunSoft px-3 py-1.5 text-xs font-semibold text-brand-ink'
-              >
-                {h.funderName ?? h.title} · {formatAmount(h)}
-              </span>
-            ))}
-          </div>
+          <>
+            <p className='text-center text-xs font-semibold uppercase tracking-widest text-brand-muted'>
+              Live from our database
+            </p>
+            <div className='mt-3'>
+              <WorldMap highlights={highlights} />
+            </div>
+            <div className='mt-4 flex flex-wrap justify-center gap-2'>
+              {highlights.map((h) => (
+                <span
+                  key={h.id}
+                  className='rounded-full border border-brand-line bg-brand-sunSoft px-3 py-1.5 text-xs font-semibold text-brand-ink'
+                >
+                  {h.funderName ?? h.title} · {formatAmount(h)}
+                </span>
+              ))}
+            </div>
+          </>
         ) : (
-          <p className='mt-4 text-center text-sm text-brand-muted'>
+          <p className='py-6 text-center text-sm text-brand-muted'>
             The live funder list could not load just now — your matches will still be checked
             against the live database at the end.
           </p>

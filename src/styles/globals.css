@@ -171,8 +171,11 @@
     transition: none;
   }
   .hero-word-swap,
-  .search-dropdown-enter {
+  .search-dropdown-enter,
+  .bubble-pop,
+  .carousel-card-in {
     animation: none !important;
+    opacity: 1 !important;
   }
 }
 
@@ -220,4 +223,20 @@
 }
 .carousel-card-in {
   animation: carousel-card-in 0.45s ease;
+}
+
+/* Quiz map bubbles pop in one after another — gentle overshoot, staggered. */
+@keyframes bubble-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.bubble-pop {
+  opacity: 0;
+  animation: bubble-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }

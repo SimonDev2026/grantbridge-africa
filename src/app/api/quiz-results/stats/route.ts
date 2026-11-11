@@ -44,7 +44,7 @@ export async function GET() {
       funders: funderIds.size,
       totalFunders: (funders ?? []).length,
       countriesCovered: BRAND.countriesCovered,
-      highlights: withUsdMax.slice(0, 6).map((g: any) => ({
+      highlights: withUsdMax.slice(0, 10).map((g: any) => ({
         id: g.id,
         title: g.title,
         funderName: funderName(g),
