@@ -19,7 +19,7 @@ export function getStripeAdmin(): Stripe {
       // Register this as an official Stripe plugin.
       // https://stripe.com/docs/building-plugins#setappinfo
       appInfo: {
-        name: 'UPDATE_THIS_WITH_YOUR_STRIPE_APP_NAME',
+        name: 'GrantBridge Africa',
         version: '0.1.0',
       },
     });

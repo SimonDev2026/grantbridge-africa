@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /account
+Disallow: /admin
+Disallow: /profile
+Disallow: /orders
+Disallow: /apply
+Disallow: /api/
+
+Sitemap: https://grantbridge-africa-git-main-simondev2026.vercel.app/sitemap.xml

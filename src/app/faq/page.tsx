@@ -94,7 +94,7 @@ const GROUPS: FaqGroup[] = [
       },
       {
         q: 'How do I get support, or ask for my data to be deleted?',
-        a: `Email us at ${BRAND.contact.email} — we reply within one working day. You can also join our WhatsApp channel for quick updates. To see, correct or delete the personal data we hold about you, or to withdraw consent for marketing, email the same address — we reply within 30 days.`,
+        a: `Email us at ${BRAND.contact.email} — we reply within one working day. To see, correct or delete the personal data we hold about you, or to withdraw consent for marketing, email the same address — we reply within 30 days.`,
       },
       {
         q: 'Can I change my plan?',

@@ -6,10 +6,17 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Script from 'next/script';
 
+import { CONSENT_COOKIE, consentCookieHeader } from '@/libs/meta/consent';
+
 const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 declare global { interface Window { fbq?: (...args: unknown[]) => void } }
 
 export const hasConsent = () => typeof window !== 'undefined' && localStorage.getItem('gb_consent') === 'yes';
+/** Mirror the localStorage choice into a cookie so the server can read it. */
+export const writeConsentCookie = (v: 'yes' | 'no') => {
+  if (typeof document === 'undefined') return;
+  document.cookie = consentCookieHeader(v);
+};
 export const newEventId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now()) + Math.random());
 
 /** Track a standard event, e.g. track('Lead', {}, eventId) or track('InitiateCheckout', { value: 9, currency: 'USD' }, id) */
@@ -27,7 +34,14 @@ export function metaCookies() {
 export function MetaPixel() {
   const pathname = usePathname();
   const [ok, setOk] = useState(false);
-  useEffect(() => { setOk(hasConsent()); }, []);
+  useEffect(() => {
+    setOk(hasConsent());
+    // Visitors who consented before the cookie mirror existed have the
+    // choice in localStorage only — sync it so server events see it too.
+    if (typeof document !== 'undefined' && localStorage.getItem('gb_consent') === 'yes') {
+      writeConsentCookie('yes');
+    }
+  }, []);
   useEffect(() => { if (ok && window.fbq) window.fbq('track', 'PageView'); }, [pathname, ok]);
   if (!PIXEL_ID || !ok) return null;
   return (
@@ -47,7 +61,12 @@ export function ConsentBanner() {
   const [show, setShow] = useState(false);
   useEffect(() => { setShow(localStorage.getItem('gb_consent') === null); }, []);
   if (!show) return null;
-  const set = (v: 'yes' | 'no') => { localStorage.setItem('gb_consent', v); setShow(false); if (v === 'yes') location.reload(); };
+  const set = (v: 'yes' | 'no') => {
+    localStorage.setItem('gb_consent', v);
+    writeConsentCookie(v);
+    setShow(false);
+    if (v === 'yes') location.reload();
+  };
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-xl rounded-xl border bg-white p-4 text-sm shadow-lg">
       We use cookies to measure our ads (Meta) and improve the site. You can change this any time in Cookie settings.

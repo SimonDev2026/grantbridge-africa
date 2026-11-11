@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { BRAND } from '@/config/brand';
+import { clientIp, RATE_LIMITS, rateLimited, tooManyRequests } from '@/libs/rate-limit';
 import { getResendClient } from '@/libs/resend/resend-client';
 
 const Body = z.object({
@@ -15,6 +16,10 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? BRAND.contact.email;
 const FROM = process.env.RESEND_FROM_EMAIL ?? 'GrantBridge Africa <onboarding@resend.dev>';
 
 export async function POST(req: NextRequest) {
+  // Rate-limit before any send: each message costs Resend quota.
+  if (rateLimited(`careers:${clientIp(req)}`, RATE_LIMITS.formSend.max, RATE_LIMITS.formSend.windowMs)) {
+    return tooManyRequests();
+  }
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: 'Please fill in a valid email and tell us what you would like to do here.' }, { status: 400 });
   const { email, message } = parsed.data;

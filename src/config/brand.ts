@@ -28,10 +28,6 @@ export const BRAND = {
     email: 'info@grantbridgeafrica.com',
     supportEmail: 'info@grantbridgeafrica.com',
   },
-  social: {
-    // WhatsApp is the free channel first (guide §8): a public channel + click-to-chat.
-    whatsappChannel: 'https://whatsapp.com/channel/0029Vb73zjl1yT22rNc6pw36',
-  },
   countriesCovered: 54,
   // Prices in US dollars, every country. Names must match the Stripe products exactly.
   plans: [

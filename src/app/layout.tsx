@@ -114,9 +114,6 @@ function Footer() {
               <Link href='/faq'>FAQ</Link>
               <Link href='/contact'>Contact us</Link>
               <Link href='mailto:info@grantbridgeafrica.com'>Email us</Link>
-              <Link href={BRAND.social.whatsappChannel} target='_blank' rel='noreferrer'>
-                WhatsApp channel
-              </Link>
             </nav>
           </div>
           <div className='flex flex-col gap-2'>

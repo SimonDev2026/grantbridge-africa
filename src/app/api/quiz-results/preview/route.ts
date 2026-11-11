@@ -12,6 +12,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { type GrantRow, isCountryEligible, type QuizAnswers,rankGrants } from '@/features/matching/score';
+import { clientIp, RATE_LIMITS, rateLimited, tooManyRequests } from '@/libs/rate-limit';
 import { supabasePublicClient } from '@/libs/supabase/supabase-public';
 
 const db = supabasePublicClient as any;
@@ -51,6 +52,11 @@ function mapGrant(g: any, country: string) {
 }
 
 export async function POST(req: NextRequest) {
+  // Called as the user answers each quiz step — generous budget, but still
+  // capped so one client cannot hammer the scorer.
+  if (rateLimited(`quiz-preview:${clientIp(req)}`, RATE_LIMITS.quizPreview.max, RATE_LIMITS.quizPreview.windowMs)) {
+    return tooManyRequests();
+  }
   try {
     const parsed = Body.safeParse(await req.json());
     if (!parsed.success) return Response.json({ error: 'Invalid input' }, { status: 400 });

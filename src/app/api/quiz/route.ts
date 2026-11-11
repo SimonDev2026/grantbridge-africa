@@ -3,6 +3,8 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { sendCapiEvent } from '@/libs/meta/capi';
+import { hasMarketingConsent } from '@/libs/meta/consent';
+import { clientIp, RATE_LIMITS, rateLimited, tooManyRequests } from '@/libs/rate-limit';
 import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
 
 const Body = z.object({
@@ -19,6 +21,11 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // Rate-limit before any DB write or Meta event: a bot must not be able to
+  // spam quiz leads or pollute Meta events.
+  if (rateLimited(`quiz:${clientIp(req)}`, RATE_LIMITS.quizUnlock.max, RATE_LIMITS.quizUnlock.windowMs)) {
+    return tooManyRequests();
+  }
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success) return Response.json({ error: 'Invalid input' }, { status: 400 });
   const b = parsed.data;
@@ -29,12 +36,17 @@ export async function POST(req: NextRequest) {
   });
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  await sendCapiEvent({
-    eventName: 'Lead', eventId: b.eventId, email: b.email,
-    ip: req.headers.get('x-forwarded-for')?.split(',')[0] ?? null,
-    userAgent: req.headers.get('user-agent'), fbp: b.fbp, fbc: b.fbc,
-    eventSourceUrl: req.headers.get('referer') ?? undefined,
-  });
+  // Server-side Meta event only when the visitor consented to measurement
+  // (the gb_consent cookie mirrors the browser consent banner). The lead
+  // itself is always saved; consent never blocks the quiz.
+  if (hasMarketingConsent(req)) {
+    await sendCapiEvent({
+      eventName: 'Lead', eventId: b.eventId, email: b.email,
+      ip: req.headers.get('x-forwarded-for')?.split(',')[0] ?? null,
+      userAgent: req.headers.get('user-agent'), fbp: b.fbp, fbc: b.fbc,
+      eventSourceUrl: req.headers.get('referer') ?? undefined,
+    });
+  }
 
   // Next step in the UI: show the full shortlist and invite sign-up (Supabase Auth).
   return Response.json({ ok: true });

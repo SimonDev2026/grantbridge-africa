@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Static sitemap of the public pages. Update the host when the real domain
+     is bought (robots.txt points here too). No invented routes: every URL
+     below is a real page in src/app. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://grantbridge-africa-git-main-simondev2026.vercel.app/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://grantbridge-africa-git-main-simondev2026.vercel.app/quiz</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://grantbridge-africa-git-main-simondev2026.vercel.app/grants</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://grantbridge-africa-git-main-simondev2026.vercel.app/pricing</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://grantbridge-africa-git-main-simondev2026.vercel.app/faq</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://grantbridge-africa-git-main-simondev2026.vercel.app/contact</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://grantbridge-africa-git-main-simondev2026.vercel.app/support</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://grantbridge-africa-git-main-simondev2026.vercel.app/careers</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://grantbridge-africa-git-main-simondev2026.vercel.app/recover</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://grantbridge-africa-git-main-simondev2026.vercel.app/about-us</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://grantbridge-africa-git-main-simondev2026.vercel.app/privacy</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://grantbridge-africa-git-main-simondev2026.vercel.app/terms</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+</urlset>

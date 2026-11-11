@@ -9,7 +9,7 @@ export default function SupportPage() {
         <a href={`mailto:${BRAND.contact.supportEmail}`} className='font-semibold text-brand-green hover:underline'>
           {BRAND.contact.supportEmail}
         </a>{' '}
-        — we reply within one working day. For quick updates, join our WhatsApp channel.
+        — we reply within one working day.
       </p>
       <div className='mt-6 flex flex-col gap-4'>
         {[

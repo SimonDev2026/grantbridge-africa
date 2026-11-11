@@ -12,6 +12,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { BRAND } from '@/config/brand';
+import { clientIp, RATE_LIMITS, rateLimited, tooManyRequests } from '@/libs/rate-limit';
 import { getResendClient } from '@/libs/resend/resend-client';
 import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
 
@@ -24,22 +25,6 @@ const Body = z.object({
 const MAILBOX = BRAND.contact.email;
 const FROM = process.env.RESEND_FROM_EMAIL ?? 'GrantBridge Africa <onboarding@resend.dev>';
 
-// Basic spam guard: max 5 messages per IP per hour. In-memory, so it is
-// per server instance — enough for a small support form; the planned
-// rate-limiting pass will replace it with a shared limiter.
-const WINDOW_MS = 60 * 60 * 1000;
-const MAX_PER_WINDOW = 5;
-const hits = new Map<string, number[]>();
-
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (recent.length >= MAX_PER_WINDOW) return true;
-  recent.push(now);
-  hits.set(ip, recent);
-  return false;
-}
-
 export async function POST(req: NextRequest) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -47,12 +32,9 @@ export async function POST(req: NextRequest) {
   }
   const { name, email, message } = parsed.data;
 
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-  if (rateLimited(ip)) {
-    return Response.json(
-      { error: 'You have sent several messages in a short time. Please wait a little and try again.' },
-      { status: 429 }
-    );
+  // Basic spam guard: max 5 messages per IP per hour (shared limiter).
+  if (rateLimited(`support:${clientIp(req)}`, RATE_LIMITS.formSend.max, RATE_LIMITS.formSend.windowMs)) {
+    return tooManyRequests();
   }
 
   // 1) Save first — this is what must never fail silently.

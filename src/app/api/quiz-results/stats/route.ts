@@ -3,12 +3,20 @@
 // and the largest open grants (real funder names + real amounts) for the
 // "You are in the right place" map screen. Nothing here is hard-coded:
 // every number comes from the grants/funders tables.
+import { NextRequest } from 'next/server';
+
 import { BRAND } from '@/config/brand';
+import { clientIp, RATE_LIMITS, rateLimited, tooManyRequests } from '@/libs/rate-limit';
 import { supabasePublicClient } from '@/libs/supabase/supabase-public';
 
 const db = supabasePublicClient as any;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Cheap read-only GET, but still capped per IP so it cannot be scraped
+  // in a tight loop.
+  if (rateLimited(`quiz-stats:${clientIp(req)}`, RATE_LIMITS.quizStats.max, RATE_LIMITS.quizStats.windowMs)) {
+    return tooManyRequests();
+  }
   try {
     // NOTE: grants and funders are queried separately and joined in JS on
     // purpose — the embedded `funders(name)` select depends on PostgREST's

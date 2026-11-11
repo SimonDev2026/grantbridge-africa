@@ -8,6 +8,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { rankGrants } from '@/features/matching/score';
+import { clientIp, RATE_LIMITS, rateLimited, tooManyRequests } from '@/libs/rate-limit';
 import { supabasePublicClient } from '@/libs/supabase/supabase-public';
 
 // Public read-only client (anon key) — see supabase-public.ts. A stale
@@ -30,6 +31,10 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // Rate-limit before the DB-heavy scoring run.
+  if (rateLimited(`quiz-results:${clientIp(req)}`, RATE_LIMITS.quizResults.max, RATE_LIMITS.quizResults.windowMs)) {
+    return tooManyRequests();
+  }
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success) return Response.json({ error: 'Invalid input' }, { status: 400 });
   const a = parsed.data;

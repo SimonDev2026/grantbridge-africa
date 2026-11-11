@@ -1,8 +1,11 @@
 // Service-order emails (Step 6). All sends are no-ops until RESEND_API_KEY is
 // set (Step 8) — nothing here may break checkout or the webhook.
+import { BRAND } from '@/config/brand';
 import { getResendClient } from '@/libs/resend/resend-client';
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@grantbridgeafrica.com';
+// One shared mailbox (owner decision 2026-11-11): admin notifications land
+// in info@, the same mailbox as contact, support and careers.
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? BRAND.contact.email;
 const FROM = process.env.RESEND_FROM_EMAIL ?? 'GrantBridge Africa <onboarding@resend.dev>';
 
 function canSend(): boolean {

@@ -360,8 +360,8 @@ export default function PrivacyPage() {
           <section id='third-party-links' className='mt-10 scroll-mt-6'>
             <h2 className='text-2xl lg:text-2xl'>Third-party links</h2>
             <p className='mt-3 leading-relaxed'>
-              The service links out to funders’ own websites, to payment pages run by Stripe, and
-              to our WhatsApp channel. Those sites have their own privacy policies, and we are not
+              The service links out to funders’ own websites and to payment pages run by Stripe.
+              Those sites have their own privacy policies, and we are not
               responsible for how they handle your data once you leave our site. Always check a
               funder’s own privacy notice before you create an account or submit an application
               on their portal.

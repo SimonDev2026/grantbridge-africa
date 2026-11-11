@@ -82,18 +82,6 @@ export default function ContactPage() {
               {' — '}one mailbox for everything, including support.
             </p>
             <p className='mt-3 text-sm text-brand-muted'>
-              For quick updates, join our{' '}
-              <a
-                href={BRAND.social.whatsappChannel}
-                target='_blank'
-                rel='noreferrer'
-                className='font-semibold text-brand-green hover:underline'
-              >
-                WhatsApp channel
-              </a>
-              .
-            </p>
-            <p className='mt-3 text-sm text-brand-muted'>
               Before writing, the{' '}
               <Link href='/faq' className='font-semibold text-brand-green hover:underline'>
                 FAQ

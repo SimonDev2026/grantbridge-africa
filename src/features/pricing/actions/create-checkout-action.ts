@@ -2,12 +2,14 @@
 // REPLACES the starter's file. Changes: USD-only guard, Apple Pay / Google Pay / Link enabled
 // (automatic payment methods instead of card-only), and Meta ids passed through for the Purchase event.
 import { headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { getOrCreateCustomer } from '@/features/account/controllers/get-or-create-customer';
 import { getSession } from '@/features/account/controllers/get-session';
 import { Price } from '@/features/pricing/types';
 import { sendCapiEvent } from '@/libs/meta/capi';
+import { CONSENT_COOKIE } from '@/libs/meta/consent';
 import { getStripeAdmin } from '@/libs/stripe/stripe-admin';
 import { getURL } from '@/utils/get-url';
 
@@ -37,12 +39,18 @@ export async function createCheckoutAction({ price, eventId, fbp, fbc, grantId }
   });
   if (!checkoutSession?.url) throw Error('checkoutSession is not defined');
 
-  const h = await headers();
-  await sendCapiEvent({
-    eventName: 'InitiateCheckout', eventId: eventId ?? checkoutSession.id, email: session.user.email,
-    externalId: session.user.id, ip: h.get('x-forwarded-for')?.split(',')[0], userAgent: h.get('user-agent'),
-    fbp, fbc, value: (price.unit_amount ?? 0) / 100, currency: 'USD',
-  });
+  // Server-side Meta event only when the visitor consented to measurement
+  // (gb_consent cookie, mirrored from the banner). Checkout proceeds
+  // regardless — consent never blocks a purchase.
+  const consented = (await cookies()).get(CONSENT_COOKIE)?.value === 'yes';
+  if (consented) {
+    const h = await headers();
+    await sendCapiEvent({
+      eventName: 'InitiateCheckout', eventId: eventId ?? checkoutSession.id, email: session.user.email,
+      externalId: session.user.id, ip: h.get('x-forwarded-for')?.split(',')[0], userAgent: h.get('user-agent'),
+      fbp, fbc, value: (price.unit_amount ?? 0) / 100, currency: 'USD',
+    });
+  }
 
   redirect(checkoutSession.url);
 }
