@@ -34,7 +34,7 @@ export default async function AdminPage() {
     <div className='flex flex-col gap-10 py-8'>
       <div className='flex items-center justify-between'>
         <h1>Admin</h1>
-        <Button className='bg-brand-green text-white hover:bg-brand-green/90' asChild>
+        <Button variant='brand' asChild>
           <Link href='/admin/orders'>Service orders →</Link>
         </Button>
       </div>
@@ -79,7 +79,7 @@ export default async function AdminPage() {
                 <div className='flex gap-2'>
                   <form action={async () => { await reviewGrant(g.id, 'approve'); }}>
 
-                    <Button size='sm' type='submit' className='bg-brand-green text-white hover:bg-brand-green/90'>
+                    <Button size='sm' type='submit' variant='brand'>
                       Approve
                     </Button>
                   </form>

@@ -80,7 +80,7 @@ export function WorkspaceActions({
           <Button
             disabled={busy !== ''}
             onClick={() => run('draft', () => generateOrderDraft(orderId))}
-            className='bg-brand-green text-white hover:bg-brand-green/90'
+            variant='brand'
           >
             {busy === 'draft' ? 'Drafting…' : 'Generate AI draft'}
           </Button>
@@ -128,7 +128,7 @@ export function WorkspaceActions({
               <div className='mt-2'>
                 <Button
                   onClick={() => run('save-draft', () => saveOrderDraftSections(draftId, sections))}
-                  className='bg-brand-green text-white hover:bg-brand-green/90'
+                  variant='brand'
                 >
                   Save draft edits
                 </Button>
@@ -151,7 +151,7 @@ export function WorkspaceActions({
           <Button
             disabled={!note.trim()}
             onClick={() => run('note', () => addOrderNote(orderId, note))}
-            className='bg-brand-green text-white hover:bg-brand-green/90'
+            variant='brand'
           >
             Add note
           </Button>
@@ -171,7 +171,7 @@ export function WorkspaceActions({
           <Button
             disabled={!message.trim()}
             onClick={() => run('message', () => sendOrderMessage(orderId, message))}
-            className='bg-brand-green text-white hover:bg-brand-green/90'
+            variant='brand'
           >
             Send
           </Button>
@@ -212,7 +212,7 @@ export function WorkspaceActions({
           />
           <Button
             onClick={() => run('deliver', () => deliverOrder(orderId, deliverNote))}
-            className='bg-brand-green text-white hover:bg-brand-green/90'
+            variant='brand'
           >
             Deliver order
           </Button>

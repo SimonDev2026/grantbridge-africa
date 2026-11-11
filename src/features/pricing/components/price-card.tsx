@@ -47,7 +47,7 @@ export function PricingCard({
   const metadata = productMetadataSchema.parse(product.metadata);
   const buttonVariantMap = {
     basic: 'default',
-    pro: 'sexy',
+    pro: 'sun',
     enterprise: 'orange',
   } as const;
 

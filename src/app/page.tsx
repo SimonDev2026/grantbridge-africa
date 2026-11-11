@@ -49,7 +49,7 @@ export default async function HomePage() {
         <h1 className='mx-auto mt-4 max-w-3xl'>{BRAND.tagline}</h1>
         <p className='mx-auto mt-4 max-w-2xl text-lg text-brand-muted'>{BRAND.description}</p>
         <div className='mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center'>
-          <Button size='lg' className='bg-brand-green text-white hover:bg-brand-green/90' asChild>
+          <Button size='lg' variant='brand' asChild>
             <Link href='/quiz'>Find my grants — free →</Link>
           </Button>
           <Button size='lg' variant='outline' asChild>
@@ -126,7 +126,7 @@ export default async function HomePage() {
               ))}
         </div>
         <div className='mt-6 text-center'>
-          <Button className='bg-brand-green text-white hover:bg-brand-green/90' asChild>
+          <Button variant='brand' asChild>
             <Link href='/quiz'>Find my grants — free →</Link>
           </Button>
         </div>
@@ -183,7 +183,7 @@ export default async function HomePage() {
           qualifies for.
         </p>
         <div className='mt-6'>
-          <Button size='lg' className='bg-brand-sun text-brand-ink hover:bg-brand-sun/90' asChild>
+          <Button size='lg' variant='sun' asChild>
             <Link href='/quiz'>Find my grants — free →</Link>
           </Button>
         </div>

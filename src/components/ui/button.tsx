@@ -4,21 +4,24 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/utils/cn';
 import { Slot } from '@radix-ui/react-slot';
 
-import { SexyBoarder } from '../sexy-boarder';
-
+// Every button shares one motion system: a gentle lift + shadow on hover,
+// a press-down scale on click, and a visible brand-green focus ring.
+// Primary CTAs (brand / sun) also get the shine sweep (.btn-shine in globals.css).
 const buttonVariants = cva(
-  'w-fit inline-flex items-center justify-center whitespace-nowrap text-sm rounded-md font-alt font-medium transition-colors disabled:pointer-events-none disabled:opacity-50',
+  'w-fit inline-flex items-center justify-center whitespace-nowrap text-sm rounded-md font-alt font-medium transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none',
   {
     variants: {
       variant: {
-        default: 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800',
+        default: 'bg-brand-ink text-white hover:bg-brand-ink/90',
+        brand: 'btn-shine bg-brand-green text-white hover:bg-brand-green/90 shadow-sm',
+        sun: 'btn-shine bg-brand-sun text-brand-ink hover:bg-brand-sun/90 shadow-sm',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-        outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
-        link: 'text-primary underline-offset-4 hover:underline',
-        orange: 'bg-orange-500 hover:bg-orange-400',
-        sexy: 'transition-all bg-black hover:bg-opacity-0',
+        outline:
+          'border border-brand-line bg-white text-brand-ink hover:bg-brand-greenSoft hover:border-brand-green/40',
+        secondary: 'bg-brand-greenSoft text-brand-green hover:bg-brand-greenSoft/70',
+        ghost: 'text-brand-ink hover:bg-brand-greenSoft',
+        link: 'text-primary underline-offset-4 hover:underline hover:translate-y-0 hover:shadow-none',
+        orange: 'bg-orange-500 text-white hover:bg-orange-400',
       },
       size: {
         default: 'h-10 px-4',
@@ -44,28 +47,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
     return (
-      <WithSexyBorder variant={variant} className={cn('w-fit', className)}>
-        <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
-      </WithSexyBorder>
+      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
     );
   }
 );
 Button.displayName = 'Button';
-
-export function WithSexyBorder({
-  variant,
-  className,
-  children,
-}: {
-  variant: string | null | undefined;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  if (variant === 'sexy') {
-    return <SexyBoarder className={className}>{children}</SexyBoarder>;
-  } else {
-    return <>{children}</>;
-  }
-}
 
 export { Button, buttonVariants };

@@ -50,11 +50,11 @@ export default async function AccountPage() {
           title='Your plan'
           footer={
             subscription ? (
-              <Button size='sm' asChild className='bg-brand-green text-white hover:bg-brand-green/90'>
+              <Button size='sm' asChild variant='brand'>
                 <Link href='/manage-subscription'>Manage your subscription</Link>
               </Button>
             ) : (
-              <Button size='sm' asChild className='bg-brand-green text-white hover:bg-brand-green/90'>
+              <Button size='sm' asChild variant='brand'>
                 <Link href='/pricing'>Start a subscription</Link>
               </Button>
             )

@@ -91,7 +91,7 @@ export function WriterClient({
 
       <div className='flex flex-wrap gap-2'>
         <Button
-          className='bg-brand-green text-white hover:bg-brand-green/90'
+          variant='brand'
           disabled={generating}
           onClick={() => generate(false)}
         >

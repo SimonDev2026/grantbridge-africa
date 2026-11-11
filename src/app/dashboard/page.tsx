@@ -87,7 +87,7 @@ export default async function DashboardPage({
           <Button variant='outline' asChild>
             <Link href='/profile'>My profile</Link>
           </Button>
-          <Button className='bg-brand-green text-white hover:bg-brand-green/90' asChild>
+          <Button variant='brand' asChild>
             <Link href='/quiz'>Find more grants</Link>
           </Button>
         </div>
@@ -100,7 +100,7 @@ export default async function DashboardPage({
             Add your organisation details and documents once — matching and AI drafts use them.
           </p>
           <div className='mt-3'>
-            <Button className='bg-brand-green text-white hover:bg-brand-green/90' asChild>
+            <Button variant='brand' asChild>
               <Link href='/profile'>Complete my profile →</Link>
             </Button>
           </div>
@@ -187,7 +187,7 @@ export default async function DashboardPage({
               No matches here yet. Take the quiz to find grants for your organisation.
             </p>
             <div className='mt-4'>
-              <Button className='bg-brand-green text-white hover:bg-brand-green/90' asChild>
+              <Button variant='brand' asChild>
                 <Link href='/quiz'>Take the quiz →</Link>
               </Button>
             </div>

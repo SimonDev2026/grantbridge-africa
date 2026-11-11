@@ -277,7 +277,7 @@ export function ProfileClient({
       </section>
 
       <div>
-        <Button type='submit' disabled={saving} className='bg-brand-green text-white hover:bg-brand-green/90'>
+        <Button type='submit' disabled={saving} variant='brand'>
           {saving ? 'Saving…' : 'Save profile'}
         </Button>
       </div>
@@ -296,7 +296,7 @@ export function ProfileClient({
             ))}
           </select>
           <input ref={fileRef} type='file' className='min-h-11 flex-1 rounded-lg border border-brand-line px-3 py-2 text-sm' />
-          <Button type='button' disabled={uploading} onClick={upload} className='bg-brand-green text-white hover:bg-brand-green/90'>
+          <Button type='button' disabled={uploading} onClick={upload} variant='brand'>
             {uploading ? 'Uploading…' : 'Upload'}
           </Button>
         </div>

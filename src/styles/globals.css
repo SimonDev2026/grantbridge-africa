@@ -120,3 +120,32 @@
   border-radius: 3px;
   font-weight: 600;
 }
+
+/* Primary CTA shine sweep — a band of light glides across brand/sun buttons on hover. */
+@keyframes btn-shine-sweep {
+  from {
+    transform: translateX(-130%) skewX(-12deg);
+  }
+  to {
+    transform: translateX(130%) skewX(-12deg);
+  }
+}
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: translateX(-130%) skewX(-12deg);
+  pointer-events: none;
+}
+.btn-shine:hover::after {
+  animation: btn-shine-sweep 0.8s ease;
+}

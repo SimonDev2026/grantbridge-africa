@@ -69,7 +69,7 @@ export function PlanCard({
             type='button'
             onClick={() => setInterval('month')}
             className={cn(
-              'rounded-full px-3 py-1 font-medium',
+              'rounded-full px-3 py-1 font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95',
               interval === 'month' ? 'bg-brand-green text-white' : 'bg-brand-greenSoft text-brand-green'
             )}
           >
@@ -79,7 +79,7 @@ export function PlanCard({
             type='button'
             onClick={() => setInterval('year')}
             className={cn(
-              'rounded-full px-3 py-1 font-medium',
+              'rounded-full px-3 py-1 font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95',
               interval === 'year' ? 'bg-brand-green text-white' : 'bg-brand-greenSoft text-brand-green'
             )}
           >
@@ -98,13 +98,13 @@ export function PlanCard({
       <div className='mt-6'>
         {price && createCheckoutAction ? (
           <Button
-            className='w-full bg-brand-green text-white hover:bg-brand-green/90'
+            variant='brand' className='w-full'
             onClick={() => createCheckoutAction({ price })}
           >
             {plan.cta}
           </Button>
         ) : (
-          <Button className='w-full bg-brand-green text-white hover:bg-brand-green/90' asChild>
+          <Button variant='brand' className='w-full' asChild>
             <Link href='/signup'>{plan.cta}</Link>
           </Button>
         )}

@@ -1,136 +1,249 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { IoLogoGithub, IoLogoGoogle } from 'react-icons/io5';
+import { IoEye, IoEyeOff, IoLogoGoogle, IoMailOpenOutline } from 'react-icons/io5';
 
+import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
-import { toast } from '@/components/ui/use-toast';
 import { ActionResponse } from '@/types/action-response';
 
-const titleMap = {
-  login: 'Login to UPDATE_THIS_WITH_YOUR_APP_DISPLAY_NAME',
-  signup: 'Join UPDATE_THIS_WITH_YOUR_APP_DISPLAY_NAME and start generating banners for free',
+const copy = {
+  login: {
+    title: 'Welcome back to GrantBridge Africa',
+    subtitle: 'Log in to see your matches, your tracker and your drafts.',
+    submit: 'Log in',
+    pending: 'Logging you in…',
+  },
+  signup: {
+    title: 'Create your free GrantBridge Africa account',
+    subtitle: 'Free Explorer account — take the quiz and see your top 3 grant matches.',
+    submit: 'Create my free account',
+    pending: 'Creating your account…',
+  },
 } as const;
+
+function friendlyAuthError(message: string): string {
+  if (/invalid login credentials/i.test(message)) {
+    return 'That email or password is not correct. Please try again.';
+  }
+  if (/email not confirmed/i.test(message)) {
+    return 'Please confirm your email first — check your inbox for the confirmation link, then log in.';
+  }
+  if (/password should be at least/i.test(message)) {
+    return 'Your password needs to be at least 8 characters long.';
+  }
+  if (/user already registered/i.test(message)) {
+    return 'An account with this email already exists. Try logging in instead.';
+  }
+  return message || 'Something went wrong. Please try again.';
+}
 
 export function AuthUI({
   mode,
   signInWithOAuth,
-  signInWithEmail,
+  signUpWithEmailPassword,
+  signInWithEmailPassword,
 }: {
   mode: 'login' | 'signup';
-  signInWithOAuth: (provider: 'github' | 'google') => Promise<ActionResponse>;
-  signInWithEmail: (email: string) => Promise<ActionResponse>;
+  signInWithOAuth: (provider: 'google', next?: string) => Promise<ActionResponse>;
+  signUpWithEmailPassword: (email: string, password: string) => Promise<ActionResponse>;
+  signInWithEmailPassword: (email: string, password: string) => Promise<ActionResponse>;
 }) {
   const [pending, setPending] = useState(false);
-  const [emailFormOpen, setEmailFormOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(null);
 
   async function handleEmailSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setPending(true);
+    setError(null);
     const form = event.target as HTMLFormElement;
-    const email = form['email'].value;
-    const response = await signInWithEmail(email);
+    const email = (form['email'].value as string).trim();
+    const password = form['password'].value as string;
+    const confirmPassword =
+      mode === 'signup' ? (form['confirmPassword'].value as string) : null;
 
-    if (response?.error) {
-      toast({
-        variant: 'destructive',
-        description: 'An error occurred while authenticating. Please try again.',
-      });
-    } else {
-      toast({
-        description: `To continue, click the link in the email sent to: ${email}`,
-      });
+    if (!email || !password) {
+      setError('Please enter your email and password.');
+      return;
+    }
+    if (mode === 'signup') {
+      if (password.length < 8) {
+        setError('Your password needs to be at least 8 characters long.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('The two passwords do not match.');
+        return;
+      }
     }
 
-    form.reset();
+    setPending(true);
+    const response =
+      mode === 'signup'
+        ? await signUpWithEmailPassword(email, password)
+        : await signInWithEmailPassword(email, password);
+
+    if (response?.error) {
+      setError(friendlyAuthError(response.error.message ?? ''));
+      setPending(false);
+      return;
+    }
+
+    if (mode === 'signup' && (response?.data as any)?.needsConfirmation) {
+      setConfirmationSentTo(email);
+      setPending(false);
+      return;
+    }
+
+    // On success the server action redirects, so we never reach here.
     setPending(false);
   }
 
-  async function handleOAuthClick(provider: 'google' | 'github') {
+  async function handleOAuthClick() {
     setPending(true);
-    const response = await signInWithOAuth(provider);
+    setError(null);
+    const response = await signInWithOAuth('google', mode === 'signup' ? '/quiz' : '/dashboard');
 
     if (response?.error) {
-      toast({
-        variant: 'destructive',
-        description: 'An error occurred while authenticating. Please try again.',
-      });
+      setError(friendlyAuthError(response.error.message ?? ''));
       setPending(false);
     }
   }
 
   return (
-    <section className='mt-16 flex w-full flex-col gap-16 rounded-lg bg-black p-10 px-4 text-center'>
-      <div className='flex flex-col gap-4'>
-        <Image src='/logo.png' width={80} height={80} alt='' className='m-auto' />
-        <h1 className='text-lg'>{titleMap[mode]}</h1>
+    <section className='w-full rounded-2xl border border-brand-line bg-white p-6 shadow-lg sm:p-10'>
+      <div className='flex flex-col items-center gap-3 text-center'>
+        <Logo />
+        <h1 className='mt-2 text-2xl font-bold text-brand-ink'>{copy[mode].title}</h1>
+        <p className='text-sm text-brand-muted'>{copy[mode].subtitle}</p>
       </div>
-      <div className='flex flex-col gap-4'>
-        <button
-          className='flex items-center justify-center gap-2 rounded-md bg-cyan-500 py-4 font-medium text-black transition-all hover:bg-cyan-400 disabled:bg-neutral-700'
-          onClick={() => handleOAuthClick('google')}
-          disabled={pending}
-        >
-          <IoLogoGoogle size={20} />
-          Continue with Google
-        </button>
-        <button
-          className='flex items-center justify-center gap-2 rounded-md bg-fuchsia-500 py-4 font-medium text-black transition-all hover:bg-fuchsia-400 disabled:bg-neutral-700'
-          onClick={() => handleOAuthClick('github')}
-          disabled={pending}
-        >
-          <IoLogoGithub size={20} />
-          Continue with GitHub
-        </button>
 
-        <Collapsible open={emailFormOpen} onOpenChange={setEmailFormOpen}>
-          <CollapsibleTrigger asChild>
-            <button
-              className='text-neutral6 flex w-full items-center justify-center gap-2 rounded-md bg-zinc-900 py-4 font-medium transition-all hover:bg-zinc-800 disabled:bg-neutral-700 disabled:text-black'
-              disabled={pending}
-            >
-              Continue with Email
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className='mt-[-2px] w-full rounded-b-md bg-zinc-900 p-8'>
-              <form onSubmit={handleEmailSubmit}>
-                <Input
-                  type='email'
-                  name='email'
-                  placeholder='Enter your email'
-                  aria-label='Enter your email'
-                  autoFocus
-                />
-                <div className='mt-4 flex justify-end gap-2'>
-                  <Button type='button' onClick={() => setEmailFormOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button variant='secondary' type='submit'>
-                    Submit
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+      {confirmationSentTo ? (
+        <div className='mt-8 rounded-xl bg-brand-greenSoft p-6 text-center'>
+          <IoMailOpenOutline size={36} className='mx-auto text-brand-green' />
+          <h2 className='mt-3 text-lg font-bold text-brand-ink'>Check your email to confirm</h2>
+          <p className='mt-2 text-sm text-brand-muted'>
+            We sent a confirmation link to <strong>{confirmationSentTo}</strong>. Click it, and
+            you will land straight on the quiz to find your grants.
+          </p>
+          <p className='mt-4 text-sm text-brand-muted'>
+            Already confirmed?{' '}
+            <Link href='/login' className='font-semibold text-brand-green hover:underline'>
+              Log in
+            </Link>
+          </p>
+        </div>
+      ) : (
+        <form onSubmit={handleEmailSubmit} className='mt-8 flex flex-col gap-4'>
+          <label className='flex flex-col gap-1.5 text-left text-sm font-medium text-brand-ink'>
+            Email
+            <Input
+              type='email'
+              name='email'
+              placeholder='you@your-organisation.org'
+              aria-label='Email address'
+              autoComplete='email'
+              autoFocus
+              required
+            />
+          </label>
+
+          <label className='flex flex-col gap-1.5 text-left text-sm font-medium text-brand-ink'>
+            Password
+            <span className='relative block'>
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                name='password'
+                placeholder={mode === 'signup' ? 'At least 8 characters' : 'Your password'}
+                aria-label='Password'
+                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                required
+                className='pr-11'
+              />
+              <button
+                type='button'
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className='absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-brand-muted transition-colors hover:text-brand-green'
+              >
+                {showPassword ? <IoEyeOff size={18} /> : <IoEye size={18} />}
+              </button>
+            </span>
+          </label>
+
+          {mode === 'signup' && (
+            <label className='flex flex-col gap-1.5 text-left text-sm font-medium text-brand-ink'>
+              Confirm password
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                name='confirmPassword'
+                placeholder='Type your password again'
+                aria-label='Confirm password'
+                autoComplete='new-password'
+                required
+              />
+            </label>
+          )}
+
+          {error && (
+            <p className='rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700'>{error}</p>
+          )}
+
+          <Button type='submit' variant='brand' size='lg' className='mt-2 w-full' disabled={pending}>
+            {pending ? copy[mode].pending : copy[mode].submit}
+          </Button>
+        </form>
+      )}
+
+      <div className='my-6 flex items-center gap-3 text-xs text-brand-muted'>
+        <span className='h-px flex-1 bg-brand-line' />
+        or continue with
+        <span className='h-px flex-1 bg-brand-line' />
       </div>
+
+      <button
+        type='button'
+        className='flex w-full items-center justify-center gap-2 rounded-md border border-brand-line bg-white py-3 font-medium text-brand-ink transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-green/40 hover:shadow-md active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50'
+        onClick={handleOAuthClick}
+        disabled={pending}
+      >
+        <IoLogoGoogle size={20} className='text-brand-green' />
+        Continue with Google
+      </button>
+
+      <p className='mt-6 text-center text-sm text-brand-muted'>
+        {mode === 'signup' ? (
+          <>
+            Already have an account?{' '}
+            <Link href='/login' className='font-semibold text-brand-green hover:underline'>
+              Log in
+            </Link>
+          </>
+        ) : (
+          <>
+            New to GrantBridge?{' '}
+            <Link href='/signup' className='font-semibold text-brand-green hover:underline'>
+              Create a free account
+            </Link>
+          </>
+        )}
+      </p>
+
       {mode === 'signup' && (
-        <span className='text-neutral5 m-auto max-w-sm text-sm'>
-          By clicking continue, you agree to our{' '}
-          <Link href='/terms' className='underline'>
+        <p className='mt-4 text-center text-xs text-brand-muted'>
+          By creating an account, you agree to our{' '}
+          <Link href='/terms' className='underline hover:text-brand-green'>
             Terms of Service
           </Link>{' '}
           and{' '}
-          <Link href='/privacy' className='underline'>
+          <Link href='/privacy' className='underline hover:text-brand-green'>
             Privacy Policy
           </Link>
           .
-        </span>
+        </p>
       )}
     </section>
   );

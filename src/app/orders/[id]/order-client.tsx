@@ -30,7 +30,7 @@ export function OrderClientActions({ orderId, status, revisionCount }: { orderId
             placeholder='Ask a question about your order…'
             className='min-h-11 flex-1 rounded-lg border border-brand-line px-3 text-sm'
           />
-          <Button disabled={!message.trim() || busy} onClick={() => run(() => sendClientMessage(orderId, message))} className='bg-brand-green text-white hover:bg-brand-green/90'>
+          <Button disabled={!message.trim() || busy} onClick={() => run(() => sendClientMessage(orderId, message))} variant='brand'>
             Send
           </Button>
         </div>
@@ -59,7 +59,7 @@ export function OrderClientActions({ orderId, status, revisionCount }: { orderId
             </div>
           )}
           <div className='mt-4'>
-            <Button disabled={busy} onClick={() => run(() => markOrderComplete(orderId))} className='bg-brand-green text-white hover:bg-brand-green/90'>
+            <Button disabled={busy} onClick={() => run(() => markOrderComplete(orderId))} variant='brand'>
               Mark order complete
             </Button>
           </div>

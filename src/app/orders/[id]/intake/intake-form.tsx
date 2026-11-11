@@ -153,7 +153,7 @@ export function IntakeForm({
           <Button type='button' variant='outline' disabled={busy !== ''} onClick={saveDraft}>
             {busy === 'draft' ? 'Saving…' : 'Save draft & return later'}
           </Button>
-          <Button type='submit' disabled={busy !== ''} className='bg-brand-green text-white hover:bg-brand-green/90'>
+          <Button type='submit' disabled={busy !== ''} variant='brand'>
             {busy === 'submit' ? 'Submitting…' : 'Submit intake'}
           </Button>
         </div>
@@ -185,7 +185,7 @@ export function IntakeForm({
             ))}
           </select>
           <input ref={fileRef} type='file' name='file' required className='min-h-11 flex-1 rounded-lg border border-brand-line px-3 py-2 text-sm' />
-          <Button type='submit' disabled={busy === 'upload'} className='bg-brand-green text-white hover:bg-brand-green/90'>
+          <Button type='submit' disabled={busy === 'upload'} variant='brand'>
             {busy === 'upload' ? 'Uploading…' : 'Upload'}
           </Button>
         </form>

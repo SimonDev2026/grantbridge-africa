@@ -212,7 +212,7 @@ export default function QuizPage() {
                       placeholder='you@organisation.org'
                       className='min-h-11 flex-1 rounded-lg border border-brand-line bg-white px-3 text-base'
                     />
-                    <Button type='submit' disabled={unlocking} className='bg-brand-green text-white hover:bg-brand-green/90'>
+                    <Button type='submit' disabled={unlocking} variant='brand'>
                       {unlocking ? 'Unlocking…' : 'Unlock my matches'}
                     </Button>
                   </div>
@@ -235,7 +235,7 @@ export default function QuizPage() {
             Create your free account to save matches, track deadlines, and draft applications.
           </p>
           <div className='mt-4'>
-            <Button className='bg-brand-green text-white hover:bg-brand-green/90' asChild>
+            <Button variant='brand' asChild>
               <Link href='/signup'>Create your free account →</Link>
             </Button>
           </div>
@@ -323,7 +323,7 @@ export default function QuizPage() {
         {step < visibleSteps.length - 1 ? (
           <Button
             disabled={!canNext}
-            className='bg-brand-green text-white hover:bg-brand-green/90 disabled:opacity-50'
+            variant='brand'
             onClick={() => setStep(step + 1)}
           >
             Continue →
@@ -331,7 +331,7 @@ export default function QuizPage() {
         ) : (
           <Button
             disabled={!canNext}
-            className='bg-brand-green text-white hover:bg-brand-green/90 disabled:opacity-50'
+            variant='brand'
             onClick={finish}
           >
             See my matches →

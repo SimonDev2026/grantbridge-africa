@@ -11,6 +11,10 @@ const siteUrl = getURL();
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
+  // Where to send a free (Explorer) user after the callback: /quiz for a fresh
+  // sign-up, /dashboard for a log-in. Only relative paths are honoured.
+  const next = requestUrl.searchParams.get('next');
+  const nextPath = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
 
   if (code) {
     const supabase = await createSupabaseServerClient();
@@ -24,7 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${siteUrl}/login`);
     }
 
-    // Check if user is subscribed, if not redirect to pricing page
+    // Paid subscribers go to their account; free users go where they came from.
     const { data: userSubscription } = await supabase
       .from('subscriptions')
       .select('*, prices(*, products(*))')
@@ -32,9 +36,9 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (!userSubscription) {
-      return NextResponse.redirect(`${siteUrl}/pricing`);
+      return NextResponse.redirect(`${siteUrl}${nextPath}`);
     } else {
-      return NextResponse.redirect(`${siteUrl}`);
+      return NextResponse.redirect(`${siteUrl}/account`);
     }
   }
 

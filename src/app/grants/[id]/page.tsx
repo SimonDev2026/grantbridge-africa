@@ -135,7 +135,7 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
       )}
 
       <section className='mt-8 flex flex-col gap-3 sm:flex-row'>
-        <Button className='bg-brand-green text-white hover:bg-brand-green/90' asChild>
+        <Button variant='brand' asChild>
           <Link href={session?.user ? `/apply/${g.id}` : '/signup'}>Write this application →</Link>
         </Button>
         <Button variant='outline' asChild>
