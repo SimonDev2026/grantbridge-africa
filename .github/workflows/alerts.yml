@@ -1,0 +1,19 @@
+# Daily alerts: deadline reminders (14/7/2 days) + weekly digest.
+# Needs the GitHub secret CRON_SECRET (same value as the Vercel env var).
+# NOTE: this file must be added via the GitHub web UI (or a token with the
+# `workflow` scope) — the repo's deploy token cannot push workflow files.
+name: alerts
+on:
+  schedule: [{ cron: "0 7 * * *" }]
+  workflow_dispatch: {}
+jobs:
+  alerts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger alerts endpoint
+        run: |
+          curl -sS -o /tmp/alerts.json -w "%{http_code}\n" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://grantbridge-africa-git-main-simondev2026.vercel.app/api/cron/alerts"
+          cat /tmp/alerts.json
