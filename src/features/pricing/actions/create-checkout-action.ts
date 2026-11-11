@@ -1,55 +1,48 @@
 'use server';
-
+// REPLACES the starter's file. Changes: USD-only guard, Apple Pay / Google Pay / Link enabled
+// (automatic payment methods instead of card-only), and Meta ids passed through for the Purchase event.
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { getOrCreateCustomer } from '@/features/account/controllers/get-or-create-customer';
 import { getSession } from '@/features/account/controllers/get-session';
 import { Price } from '@/features/pricing/types';
+import { sendCapiEvent } from '@/libs/meta/capi';
 import { stripeAdmin } from '@/libs/stripe/stripe-admin';
 import { getURL } from '@/utils/get-url';
 
-export async function createCheckoutAction({ price }: { price: Price }) {
-  // 1. Get the user from session
+export async function createCheckoutAction({ price, eventId, fbp, fbc }: { price: Price; eventId?: string; fbp?: string; fbc?: string }) {
   const session = await getSession();
+  if (!session?.user) return redirect(`${getURL()}/signup`);
+  if (!session.user.email) throw Error('Could not get email');
 
-  if (!session?.user) {
-    return redirect(`${getURL()}/signup`);
-  }
+  // We only sell in US dollars, in every country.
+  if ((price.currency ?? '').toLowerCase() !== 'usd') throw Error('Only USD prices are allowed');
 
-  if (!session.user.email) {
-    throw Error('Could not get email');
-  }
+  const customer = await getOrCreateCustomer({ userId: session.user.id, email: session.user.email });
 
-  // 2. Retrieve or create the customer in Stripe
-  const customer = await getOrCreateCustomer({
-    userId: session.user.id,
-    email: session.user.email,
-  });
-
-  // 3. Create a checkout session in Stripe
   const checkoutSession = await stripeAdmin.checkout.sessions.create({
-    payment_method_types: ['card'],
+    // No payment_method_types: Stripe shows every method enabled in the Dashboard
+    // (cards, Apple Pay, Google Pay, Link). Keep Adaptive Pricing OFF in Dashboard so prices stay in USD.
     billing_address_collection: 'required',
     customer,
-    customer_update: {
-      address: 'auto',
-    },
-    line_items: [
-      {
-        price: price.id,
-        quantity: 1,
-      },
-    ],
+    customer_update: { address: 'auto' },
+    line_items: [{ price: price.id, quantity: 1 }],
     mode: price.type === 'recurring' ? 'subscription' : 'payment',
     allow_promotion_codes: true,
-    success_url: `${getURL()}/account`,
-    cancel_url: `${getURL()}/`,
+    client_reference_id: session.user.id,
+    metadata: { user_id: session.user.id, fbp: fbp ?? '', fbc: fbc ?? '', event_id: eventId ?? '' },
+    success_url: `${getURL()}/dashboard?checkout=success`,
+    cancel_url: `${getURL()}/pricing`,
+  });
+  if (!checkoutSession?.url) throw Error('checkoutSession is not defined');
+
+  const h = await headers();
+  await sendCapiEvent({
+    eventName: 'InitiateCheckout', eventId: eventId ?? checkoutSession.id, email: session.user.email,
+    externalId: session.user.id, ip: h.get('x-forwarded-for')?.split(',')[0], userAgent: h.get('user-agent'),
+    fbp, fbc, value: (price.unit_amount ?? 0) / 100, currency: 'USD',
   });
 
-  if (!checkoutSession || !checkoutSession.url) {
-    throw Error('checkoutSession is not defined');
-  }
-
-  // 4. Redirect to checkout url
   redirect(checkoutSession.url);
 }
