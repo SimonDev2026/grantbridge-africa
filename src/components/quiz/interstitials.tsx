@@ -98,8 +98,9 @@ export function MapInterstitial({
         )}
         {stats && (
           <p className='mt-4 text-center text-sm text-brand-muted'>
-            {stats.openGrants} open grant{stats.openGrants === 1 ? '' : 's'} from {stats.funders}{' '}
-            funder{stats.funders === 1 ? '' : 's'} right now.
+            Showing the {highlights.length} largest of {stats.openGrants} open grant
+            {stats.openGrants === 1 ? '' : 's'} from {stats.funders} funder
+            {stats.funders === 1 ? '' : 's'} right now.
           </p>
         )}
       </div>

@@ -153,7 +153,7 @@ function placeBubbles(highlights: FunderHighlight[]): PlacedBubble[] {
     };
     const rx = size / 2;
     const ry = size;
-    const GAP = 0.5;
+    const GAP = 1.5;
     const overlaps = (x: number, y: number) =>
       placed.some((p) => {
         const prx = p.size / 2;
