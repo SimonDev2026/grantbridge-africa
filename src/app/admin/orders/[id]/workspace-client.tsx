@@ -11,6 +11,7 @@ import {
   setOrderStatus,
   uploadOrderFile,
 } from '@/app/admin/actions';
+import { AdminCard, AdminSectionHeading } from '@/app/admin/admin-ui';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/utils/cn';
 
@@ -28,6 +29,9 @@ function renderWithPlaceholders(text: string) {
     )
   );
 }
+
+const inputClass =
+  'min-h-11 flex-1 rounded-lg border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-green focus:outline-none focus:ring-2 focus:ring-brand-green/30';
 
 export function WorkspaceActions({
   orderId,
@@ -58,17 +62,17 @@ export function WorkspaceActions({
   }
 
   return (
-    <div className='flex flex-col gap-8'>
+    <div className='flex flex-col gap-6'>
       {/* Status + draft generation */}
-      <section className='rounded-2xl border border-brand-line bg-white p-5'>
-        <h2>Order controls</h2>
-        <div className='mt-3 flex flex-wrap items-center gap-2'>
-          <label className='text-sm font-medium'>
+      <AdminCard>
+        <AdminSectionHeading eyebrow='Controls' title='Order controls' />
+        <div className='mt-4 flex flex-wrap items-center gap-3'>
+          <label className='flex items-center gap-2 text-sm font-semibold text-brand-ink'>
             Status
             <select
               value={status}
               onChange={(e) => run('status', () => setOrderStatus(orderId, e.target.value))}
-              className='ml-2 min-h-10 rounded-lg border border-brand-line bg-white px-2 text-sm'
+              className='min-h-10 rounded-lg border border-brand-line bg-white px-3 text-sm focus:border-brand-green focus:outline-none focus:ring-2 focus:ring-brand-green/30'
             >
               {['paid', 'intake_pending', 'in_progress', 'review', 'delivered', 'closed', 'refunded'].map((s) => (
                 <option key={s} value={s}>
@@ -84,19 +88,23 @@ export function WorkspaceActions({
           >
             {busy === 'draft' ? 'Drafting…' : 'Generate AI draft'}
           </Button>
-          {result && <span className='text-sm text-brand-green'>{result}</span>}
+          {result && (
+            <span className='rounded-full bg-brand-greenSoft px-3 py-1.5 text-sm font-medium text-brand-green'>
+              {result}
+            </span>
+          )}
         </div>
-        <p className='mt-2 text-sm text-brand-muted'>
+        <p className='mt-3 text-sm leading-relaxed text-brand-muted'>
           Generate AI draft builds the application from the client’s intake, profile and documents.
           It moves the order to “review”.
         </p>
-      </section>
+      </AdminCard>
 
       {/* Draft editor */}
       {sections.length > 0 && draftId && (
-        <section className='rounded-2xl border border-brand-line bg-white p-5'>
-          <h2>Draft sections</h2>
-          <div className='mt-3 grid gap-4 lg:grid-cols-[220px_1fr]'>
+        <AdminCard>
+          <AdminSectionHeading eyebrow='Application' title='Draft sections' />
+          <div className='mt-4 grid gap-4 lg:grid-cols-[220px_1fr]'>
             <div className='flex flex-col gap-2'>
               {sections.map((s, i) => (
                 <button
@@ -104,8 +112,10 @@ export function WorkspaceActions({
                   type='button'
                   onClick={() => setActive(i)}
                   className={cn(
-                    'rounded-xl border p-3 text-left text-sm font-medium',
-                    i === active ? 'border-brand-green bg-brand-greenSoft' : 'border-brand-line bg-white'
+                    'rounded-xl border p-3 text-left text-sm font-medium transition-colors',
+                    i === active
+                      ? 'border-brand-green bg-brand-greenSoft text-brand-green'
+                      : 'border-brand-line bg-white text-brand-ink hover:border-brand-green'
                   )}
                 >
                   {i + 1}. {s.title}
@@ -113,8 +123,8 @@ export function WorkspaceActions({
               ))}
             </div>
             <div>
-              <h3>{sections[active]?.title}</h3>
-              <div className='mt-2 whitespace-pre-wrap rounded-xl bg-brand-bg p-4 text-sm leading-relaxed'>
+              <h3 className='text-lg lg:text-xl'>{sections[active]?.title}</h3>
+              <div className='mt-2 whitespace-pre-wrap rounded-xl bg-brand-bg p-4 text-sm leading-relaxed text-brand-ink'>
                 {renderWithPlaceholders(sections[active]?.body ?? '')}
               </div>
               <textarea
@@ -123,7 +133,7 @@ export function WorkspaceActions({
                   setSections((ss) => ss.map((s, i) => (i === active ? { ...s, body: e.target.value } : s)))
                 }
                 rows={8}
-                className='mt-3 w-full rounded-xl border border-brand-line p-3 text-base'
+                className='mt-3 w-full rounded-xl border border-brand-line bg-white p-3 text-base focus:border-brand-green focus:outline-none focus:ring-2 focus:ring-brand-green/30'
               />
               <div className='mt-2'>
                 <Button
@@ -135,18 +145,18 @@ export function WorkspaceActions({
               </div>
             </div>
           </div>
-        </section>
+        </AdminCard>
       )}
 
       {/* Private notes */}
-      <section className='rounded-2xl border border-brand-line bg-white p-5'>
-        <h2>Private notes (admin only)</h2>
-        <div className='mt-3 flex flex-col gap-2 sm:flex-row'>
+      <AdminCard>
+        <AdminSectionHeading eyebrow='Internal' title='Private notes (admin only)' />
+        <div className='mt-4 flex flex-col gap-2 sm:flex-row'>
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder='Internal note — the client never sees this'
-            className='min-h-11 flex-1 rounded-lg border border-brand-line px-3 text-sm'
+            className={inputClass}
           />
           <Button
             disabled={!note.trim()}
@@ -156,17 +166,17 @@ export function WorkspaceActions({
             Add note
           </Button>
         </div>
-      </section>
+      </AdminCard>
 
       {/* Message thread */}
-      <section className='rounded-2xl border border-brand-line bg-white p-5'>
-        <h2>Message the client (also emailed)</h2>
-        <div className='mt-3 flex flex-col gap-2 sm:flex-row'>
+      <AdminCard>
+        <AdminSectionHeading eyebrow='Communication' title='Message the client (also emailed)' />
+        <div className='mt-4 flex flex-col gap-2 sm:flex-row'>
           <input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder='Write to the client…'
-            className='min-h-11 flex-1 rounded-lg border border-brand-line px-3 text-sm'
+            className={inputClass}
           />
           <Button
             disabled={!message.trim()}
@@ -176,17 +186,17 @@ export function WorkspaceActions({
             Send
           </Button>
         </div>
-      </section>
+      </AdminCard>
 
       {/* Delivery */}
-      <section className='rounded-2xl border border-brand-line bg-white p-5'>
-        <h2>Delivery</h2>
-        <p className='mt-1 text-sm text-brand-muted'>
+      <AdminCard>
+        <AdminSectionHeading eyebrow='Handover' title='Delivery' />
+        <p className='mt-2 text-sm leading-relaxed text-brand-muted'>
           Upload the finished Word/PDF files first, then press Deliver — the client gets an email
           with the download link, the submission checklist and the funder’s official link.
         </p>
         <form
-          className='mt-3 flex flex-col gap-2 sm:flex-row'
+          className='mt-4 flex flex-col gap-2 sm:flex-row'
           onSubmit={async (e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
@@ -197,7 +207,7 @@ export function WorkspaceActions({
             if (r.ok) window.location.reload();
           }}
         >
-          <input type='file' name='file' required className='min-h-11 flex-1 rounded-lg border border-brand-line px-3 py-2 text-sm' />
+          <input type='file' name='file' required className={inputClass} />
           <input type='hidden' name='kind' value='delivery' />
           <Button type='submit' disabled={busy === 'upload'} variant='outline'>
             {busy === 'upload' ? 'Uploading…' : 'Upload delivery file'}
@@ -208,7 +218,7 @@ export function WorkspaceActions({
             value={deliverNote}
             onChange={(e) => setDeliverNote(e.target.value)}
             placeholder='Note to the client (optional)'
-            className='min-h-11 flex-1 rounded-lg border border-brand-line px-3 text-sm'
+            className={inputClass}
           />
           <Button
             onClick={() => run('deliver', () => deliverOrder(orderId, deliverNote))}
@@ -217,8 +227,12 @@ export function WorkspaceActions({
             Deliver order
           </Button>
         </div>
-        {result && <p className='mt-2 text-sm text-brand-green'>{result}</p>}
-      </section>
+        {result && (
+          <p className='mt-3 w-fit rounded-full bg-brand-greenSoft px-3 py-1.5 text-sm font-medium text-brand-green'>
+            {result}
+          </p>
+        )}
+      </AdminCard>
     </div>
   );
 }

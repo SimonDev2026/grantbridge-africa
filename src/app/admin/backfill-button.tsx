@@ -37,7 +37,13 @@ export function BackfillEmbeddingsButton() {
         {busy ? 'Embedding…' : 'Backfill embeddings'}
       </Button>
       {result && (
-        <p className={`text-sm ${failed ? 'text-red-700' : 'text-brand-muted'}`}>{result}</p>
+        <p
+          className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+            failed ? 'bg-red-50 text-red-700' : 'bg-brand-greenSoft text-brand-green'
+          }`}
+        >
+          {result}
+        </p>
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { isAdmin, reviewGrant } from '@/app/admin/actions';
+import { AdminCard, AdminPageHeader, AdminSectionHeading, StatusPill } from '@/app/admin/admin-ui';
 import { BackfillEmbeddingsButton } from '@/app/admin/backfill-button';
 import { Button } from '@/components/ui/button';
 import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
@@ -36,79 +37,154 @@ export default async function AdminPage() {
     return sum + (s.prices?.interval === 'year' ? amt / 12 : amt);
   }, 0);
 
-  return (
-    <div className='flex flex-col gap-10 py-8'>
-      <div className='flex items-center justify-between'>
-        <h1>Admin</h1>
-        <Button variant='brand' asChild>
-          <Link href='/admin/orders'>Service orders →</Link>
-        </Button>
-      </div>
+  const missing = missingEmbeddings ?? 0;
+  const awaiting = (queue ?? []).length;
 
-      <section className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
+  return (
+    <div className='flex flex-col gap-6 py-8'>
+      <AdminPageHeader
+        title='Admin back office'
+        subtitle='Grants, matching, subscriptions and service orders — everything that runs GrantBridge, in one place.'
+        active='overview'
+        actions={
+          <Button variant='brand' asChild>
+            <Link href='/admin/orders'>Service orders →</Link>
+          </Button>
+        }
+      />
+
+      <section aria-label='Key numbers' className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
         {[
-          { label: 'Organisations', value: userCount ?? 0 },
-          { label: 'MRR (USD)', value: `$${mrr.toFixed(2)}` },
-          { label: 'Active subscriptions', value: (subs ?? []).length },
-          { label: 'Grants awaiting review', value: (queue ?? []).length },
+          {
+            label: 'Organisations',
+            sub: 'Registered profiles',
+            value: userCount ?? 0,
+            accent: 'border-t-brand-green',
+          },
+          {
+            label: 'MRR (USD)',
+            sub: 'Monthly recurring revenue',
+            value: `$${mrr.toFixed(2)}`,
+            accent: 'border-t-brand-sun',
+          },
+          {
+            label: 'Active subscriptions',
+            sub: 'Paying plans right now',
+            value: (subs ?? []).length,
+            accent: 'border-t-brand-green',
+          },
+          {
+            label: 'Grants awaiting review',
+            sub: 'Collector finds to check',
+            value: awaiting,
+            accent: awaiting > 0 ? 'border-t-brand-sun' : 'border-t-brand-green',
+          },
         ].map((s) => (
-          <div key={s.label} className='rounded-2xl border border-brand-line bg-white p-5'>
-            <div className='text-2xl font-bold text-brand-ink'>{s.value}</div>
-            <div className='text-sm text-brand-muted'>{s.label}</div>
+          <div
+            key={s.label}
+            className={`rounded-2xl border border-brand-line border-t-4 bg-white p-5 shadow-sm ${s.accent}`}
+          >
+            <div className='font-alt text-3xl font-bold text-brand-ink'>{s.value}</div>
+            <div className='mt-1 text-sm font-semibold text-brand-ink'>{s.label}</div>
+            <div className='text-xs text-brand-muted'>{s.sub}</div>
           </div>
         ))}
       </section>
 
-      <section>
-        <h2>Matching</h2>
-        <p className='mt-1 text-sm text-brand-muted'>
-          {(missingEmbeddings ?? 0) === 0
+      <AdminCard>
+        <AdminSectionHeading
+          eyebrow='AI matching'
+          title='Matching'
+          right={
+            missing === 0 ? (
+              <StatusPill tone='green'>Vector score active</StatusPill>
+            ) : (
+              <StatusPill tone='sun'>Backfill needed</StatusPill>
+            )
+          }
+        />
+        <p className='mt-2 text-sm leading-relaxed text-brand-muted'>
+          {missing === 0
             ? 'Every approved grant has a matching vector — the vector score is active.'
-            : `${missingEmbeddings} approved grant${missingEmbeddings === 1 ? '' : 's'} ${missingEmbeddings === 1 ? 'has' : 'have'} no matching vector yet. Matching still works without vectors (fallback score), but the vector ranking only applies after a backfill. The collector embeds new grants on its daily run; this button embeds the missing ones now.`}
+            : `${missing} approved grant${missing === 1 ? '' : 's'} ${missing === 1 ? 'has' : 'have'} no matching vector yet. Matching still works without vectors (fallback score), but the vector ranking only applies after a backfill. The collector embeds new grants on its daily run; this button embeds the missing ones now.`}
         </p>
         <div className='mt-4'>
           <BackfillEmbeddingsButton />
         </div>
-      </section>
+      </AdminCard>
 
-      <section>
-        <h2>Grant review queue</h2>
-        <p className='mt-1 text-sm text-brand-muted'>
+      <AdminCard>
+        <AdminSectionHeading
+          eyebrow='Review queue'
+          title='Grant review queue'
+          right={
+            awaiting === 0 ? (
+              <StatusPill tone='green'>Queue clear</StatusPill>
+            ) : (
+              <StatusPill tone='sun'>
+                {awaiting} awaiting review
+              </StatusPill>
+            )
+          }
+        />
+        <p className='mt-2 text-sm leading-relaxed text-brand-muted'>
           Grants from the collector land here unapproved. Approve only after checking the funder’s
           official page. “Scam” flags fee-charging listings and hides them.
         </p>
-        {(queue ?? []).length === 0 ? (
-          <p className='mt-4 rounded-2xl border border-brand-line bg-white p-5 text-brand-muted'>
-            Queue is clear — nothing awaiting review.
-          </p>
+        {awaiting === 0 ? (
+          <div className='mt-5 flex flex-col items-center gap-3 rounded-2xl bg-brand-bg px-5 py-8 text-center'>
+            <span className='flex h-10 w-10 items-center justify-center rounded-full bg-brand-greenSoft text-lg font-bold text-brand-green'>
+              ✓
+            </span>
+            <p className='font-semibold text-brand-ink'>Queue is clear</p>
+            <p className='text-sm text-brand-muted'>Nothing awaiting review right now.</p>
+          </div>
         ) : (
-          <div className='mt-4 flex flex-col gap-3'>
+          <div className='mt-5 flex flex-col gap-3'>
             {(queue ?? []).map((g: any) => (
-              <div key={g.id} className='flex flex-col gap-3 rounded-2xl border border-brand-line bg-white p-4 sm:flex-row sm:items-center sm:justify-between'>
+              <div
+                key={g.id}
+                className='flex flex-col gap-3 rounded-2xl border border-brand-line bg-white p-4 shadow-sm transition-colors hover:border-brand-green sm:flex-row sm:items-center sm:justify-between'
+              >
                 <div>
                   <div className='font-semibold text-brand-ink'>{g.title}</div>
-                  <div className='text-sm text-brand-muted'>
+                  <div className='mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-brand-muted'>
+                    <span className='inline-block h-2 w-2 rounded-full bg-brand-green' aria-hidden='true' />
                     {g.funders?.name ?? 'Unknown funder'} ·{' '}
-                    <a href={g.official_url} target='_blank' rel='noreferrer' className='text-brand-green hover:underline'>
+                    <a
+                      href={g.official_url}
+                      target='_blank'
+                      rel='noreferrer'
+                      className='font-medium text-brand-green hover:underline'
+                    >
                       Official page ↗
                     </a>
                   </div>
                 </div>
                 <div className='flex gap-2'>
-                  <form action={async () => { await reviewGrant(g.id, 'approve'); }}>
-
+                  <form
+                    action={async () => {
+                      await reviewGrant(g.id, 'approve');
+                    }}
+                  >
                     <Button size='sm' type='submit' variant='brand'>
                       Approve
                     </Button>
                   </form>
-                  <form action={async () => { await reviewGrant(g.id, 'reject'); }}>
-
+                  <form
+                    action={async () => {
+                      await reviewGrant(g.id, 'reject');
+                    }}
+                  >
                     <Button size='sm' type='submit' variant='outline'>
                       Reject
                     </Button>
                   </form>
-                  <form action={async () => { await reviewGrant(g.id, 'scam'); }}>
-
+                  <form
+                    action={async () => {
+                      await reviewGrant(g.id, 'scam');
+                    }}
+                  >
                     <Button size='sm' type='submit' variant='destructive'>
                       Scam
                     </Button>
@@ -118,36 +194,44 @@ export default async function AdminPage() {
             ))}
           </div>
         )}
-      </section>
+      </AdminCard>
 
-      <section>
-        <h2>Source health</h2>
+      <AdminCard>
+        <AdminSectionHeading eyebrow='Collector' title='Source health' />
         <div className='mt-4 flex flex-col gap-2'>
           {(sources ?? []).map((s: any) => (
-            <div key={s.id} className='flex flex-col gap-1 rounded-xl border border-brand-line bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between'>
-              <div>
+            <div
+              key={s.id}
+              className='flex flex-col gap-2 rounded-xl border border-brand-line bg-white px-4 py-3 transition-colors hover:border-brand-green sm:flex-row sm:items-center sm:justify-between'
+            >
+              <div className='min-w-0'>
                 <span className='font-medium text-brand-ink'>{s.name}</span>{' '}
-                <span className='text-sm text-brand-muted'>{s.url}</span>
+                <span className='break-all text-sm text-brand-muted'>{s.url}</span>
               </div>
-              <div className='text-sm'>
+              <div className='flex shrink-0 items-center gap-2 text-sm'>
                 {s.last_ok === true ? (
-                  <span className='font-semibold text-brand-green'>Healthy</span>
+                  <StatusPill tone='green'>Healthy</StatusPill>
                 ) : s.last_ok === false ? (
-                  <span className='font-semibold text-red-600'>Failing</span>
+                  <StatusPill tone='red'>Failing</StatusPill>
                 ) : (
-                  <span className='text-brand-muted'>Never run</span>
+                  <StatusPill tone='muted'>Never run</StatusPill>
                 )}
-                {s.last_run && <span className='text-brand-muted'> · last run {new Date(s.last_run).toLocaleDateString()}</span>}
+                {s.last_run && (
+                  <span className='text-brand-muted'>last run {new Date(s.last_run).toLocaleDateString()}</span>
+                )}
               </div>
             </div>
           ))}
           {(sources ?? []).length === 0 && (
-            <p className='rounded-2xl border border-brand-line bg-white p-5 text-brand-muted'>
-              No sources yet — the collector registers them on its first run (daily 03:00 UTC).
-            </p>
+            <div className='rounded-2xl bg-brand-bg px-5 py-8 text-center'>
+              <p className='font-semibold text-brand-ink'>No sources yet</p>
+              <p className='mt-1 text-sm text-brand-muted'>
+                The collector registers them on its first run (daily 03:00 UTC).
+              </p>
+            </div>
           )}
         </div>
-      </section>
+      </AdminCard>
     </div>
   );
 }

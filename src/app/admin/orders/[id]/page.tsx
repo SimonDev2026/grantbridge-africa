@@ -2,10 +2,31 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 import { isAdmin } from '@/app/admin/actions';
+import { AdminCard, AdminSectionHeading, StatusPill } from '@/app/admin/admin-ui';
 import { WorkspaceActions } from '@/app/admin/orders/[id]/workspace-client';
 import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
 
 const db = supabaseAdminClient as any;
+
+type PillTone = 'green' | 'sun' | 'red' | 'muted' | 'blue';
+
+function statusTone(status: string): PillTone {
+  switch (status) {
+    case 'paid':
+    case 'delivered':
+      return 'green';
+    case 'intake_pending':
+    case 'in_progress':
+    case 'review':
+      return 'sun';
+    case 'refunded':
+      return 'red';
+    case 'closed':
+      return 'muted';
+    default:
+      return 'muted';
+  }
+}
 
 export default async function OrderWorkspacePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,32 +56,42 @@ export default async function OrderWorkspacePage({ params }: { params: Promise<{
   ]);
 
   return (
-    <div className='flex flex-col gap-8 py-8'>
-      <div>
-        <Link href='/admin/orders' className='text-sm font-medium text-brand-green hover:underline'>
+    <div className='flex flex-col gap-6 py-8'>
+      {/* Header */}
+      <div className='rounded-2xl border border-brand-line bg-white p-5 shadow-sm sm:p-6'>
+        <Link href='/admin/orders' className='text-sm font-semibold text-brand-green hover:underline'>
           ← All orders
         </Link>
-        <h1 className='mt-2'>
-          {order.package ?? 'Service'} order — {profile?.org_name ?? order.user_id.slice(0, 8)}
-        </h1>
-        <p className='mt-1 text-brand-muted'>
-          {order.grants?.title ?? 'No grant linked'} ·{' '}
-          {order.amount_paid_cents ? `$${(order.amount_paid_cents / 100).toFixed(2)}` : ''} · Status:{' '}
-          <span className='font-semibold text-brand-ink'>{(order.status ?? 'paid').replace('_', ' ')}</span>
-          {order.deadline ? ` · Deadline ${order.deadline}` : ''}
-          {order.revision_requested ? ' · Revision requested' : ''}
-        </p>
+        <div className='mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+          <div>
+            <span className='inline-block rounded-full bg-brand-greenSoft px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-brand-green'>
+              Admin · Service order
+            </span>
+            <h1 className='mt-2 text-3xl lg:text-4xl'>
+              {order.package ?? 'Service'} order — {profile?.org_name ?? order.user_id.slice(0, 8)}
+            </h1>
+            <p className='mt-2 text-sm leading-relaxed text-brand-muted'>
+              {order.grants?.title ?? 'No grant linked'}
+              {order.amount_paid_cents ? ` · $${(order.amount_paid_cents / 100).toFixed(2)}` : ''}
+              {order.deadline ? ` · Deadline ${order.deadline}` : ''}
+              {order.revision_requested ? ' · Revision requested' : ''}
+            </p>
+          </div>
+          <StatusPill tone={statusTone(order.status ?? 'paid')}>
+            {(order.status ?? 'paid').replace('_', ' ')}
+          </StatusPill>
+        </div>
       </div>
 
       {/* Intake answers */}
-      <section className='rounded-2xl border border-brand-line bg-white p-5'>
-        <h2>Intake answers</h2>
+      <AdminCard>
+        <AdminSectionHeading eyebrow='Client intake' title='Intake answers' />
         {!intake ? (
-          <p className='mt-2 text-sm text-brand-muted'>
+          <p className='mt-3 text-sm text-brand-muted'>
             The client has not filled in the intake form yet. Status is “{order.status}”.
           </p>
         ) : (
-          <dl className='mt-3 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2'>
+          <dl className='mt-4 grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2'>
             {[
               ['Organisation', intake.org_name],
               ['Type', intake.org_type],
@@ -77,86 +108,95 @@ export default async function OrderWorkspacePage({ params }: { params: Promise<{
               ['Intake status', intake.status],
             ].map(([k, v]) => (
               <div key={k}>
-                <dt className='font-semibold text-brand-ink'>{k}</dt>
-                <dd className='text-brand-muted'>{v || '—'}</dd>
+                <dt className='text-[11px] font-bold uppercase tracking-widest text-brand-muted'>{k}</dt>
+                <dd className='mt-0.5 text-brand-ink'>{v || '—'}</dd>
               </div>
             ))}
           </dl>
         )}
-      </section>
+      </AdminCard>
 
       {/* Files */}
-      <section className='rounded-2xl border border-brand-line bg-white p-5'>
-        <h2>Files (private bucket — every view is logged)</h2>
+      <AdminCard>
+        <AdminSectionHeading eyebrow='Documents' title='Files' />
+        <p className='mt-1 text-sm text-brand-muted'>Private bucket — every view is logged.</p>
         {(files ?? []).length === 0 ? (
-          <p className='mt-2 text-sm text-brand-muted'>No files yet.</p>
+          <p className='mt-3 text-sm text-brand-muted'>No files yet.</p>
         ) : (
-          <ul className='mt-3 flex flex-col gap-2'>
+          <ul className='mt-4 flex flex-col gap-2'>
             {(files ?? []).map((f: any) => (
-              <li key={f.id} className='flex items-center justify-between gap-3 rounded-xl border border-brand-line px-3 py-2 text-sm'>
-                <span>
-                  <span className='font-medium'>{f.kind}</span>{' '}
-                  <span className='text-brand-muted'>{f.file_name}</span>
+              <li
+                key={f.id}
+                className='flex items-center justify-between gap-3 rounded-xl border border-brand-line px-4 py-3 text-sm transition-colors hover:border-brand-green'
+              >
+                <span className='min-w-0'>
+                  <span className='font-semibold text-brand-ink'>{f.kind}</span>{' '}
+                  <span className='break-all text-brand-muted'>{f.file_name}</span>
                 </span>
-                <a href={`/api/order-files/${f.id}`} className='font-semibold text-brand-green hover:underline'>
+                <a href={`/api/order-files/${f.id}`} className='shrink-0 font-semibold text-brand-green hover:underline'>
                   Download
                 </a>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </AdminCard>
 
       {/* Notes (private) */}
-      <section className='rounded-2xl border border-brand-line bg-white p-5'>
-        <h2>Private notes</h2>
+      <AdminCard>
+        <AdminSectionHeading eyebrow='Internal' title='Private notes' />
         {(notes ?? []).length === 0 ? (
-          <p className='mt-2 text-sm text-brand-muted'>No notes yet.</p>
+          <p className='mt-3 text-sm text-brand-muted'>No notes yet.</p>
         ) : (
-          <ul className='mt-3 flex flex-col gap-2'>
+          <ul className='mt-4 flex flex-col gap-2'>
             {(notes ?? []).map((n: any) => (
-              <li key={n.id} className='rounded-xl bg-brand-bg p-3 text-sm'>
+              <li key={n.id} className='rounded-xl bg-brand-bg p-4 text-sm text-brand-ink'>
                 {n.body}
-                <span className='block text-xs text-brand-muted'>{new Date(n.created_at).toLocaleString()}</span>
+                <span className='mt-1 block text-xs text-brand-muted'>{new Date(n.created_at).toLocaleString()}</span>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </AdminCard>
 
       {/* Message thread */}
-      <section className='rounded-2xl border border-brand-line bg-white p-5'>
-        <h2>Client message thread</h2>
+      <AdminCard>
+        <AdminSectionHeading eyebrow='Communication' title='Client message thread' />
         {(messages ?? []).length === 0 ? (
-          <p className='mt-2 text-sm text-brand-muted'>No messages yet.</p>
+          <p className='mt-3 text-sm text-brand-muted'>No messages yet.</p>
         ) : (
-          <ul className='mt-3 flex flex-col gap-2'>
+          <ul className='mt-4 flex flex-col gap-2'>
             {(messages ?? []).map((m: any) => (
               <li
                 key={m.id}
-                className={`rounded-xl p-3 text-sm ${m.sender === 'admin' ? 'bg-brand-greenSoft' : 'bg-brand-bg'}`}
+                className={`rounded-xl p-4 text-sm text-brand-ink ${m.sender === 'admin' ? 'bg-brand-greenSoft' : 'bg-brand-bg'}`}
               >
                 <span className='font-semibold'>{m.sender === 'admin' ? 'Us' : 'Client'}</span>: {m.body}
-                <span className='block text-xs text-brand-muted'>{new Date(m.created_at).toLocaleString()}</span>
+                <span className='mt-1 block text-xs text-brand-muted'>{new Date(m.created_at).toLocaleString()}</span>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </AdminCard>
 
       {/* Deliveries */}
       {deliveries?.length > 0 && (
-        <section className='rounded-2xl border border-brand-line bg-white p-5'>
-          <h2>Deliveries</h2>
-          <ul className='mt-3 flex flex-col gap-2 text-sm'>
+        <AdminCard>
+          <AdminSectionHeading eyebrow='Handover' title='Deliveries' />
+          <ul className='mt-4 flex flex-col gap-2 text-sm'>
             {deliveries.map((d: any) => (
-              <li key={d.id}>
-                Delivered {new Date(d.delivered_at).toLocaleString()}
-                {d.note ? ` — ${d.note}` : ''}
+              <li key={d.id} className='flex items-start gap-2 rounded-xl bg-brand-bg px-4 py-3 text-brand-ink'>
+                <span className='mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-greenSoft text-xs font-bold text-brand-green'>
+                  ✓
+                </span>
+                <span>
+                  Delivered {new Date(d.delivered_at).toLocaleString()}
+                  {d.note ? ` — ${d.note}` : ''}
+                </span>
               </li>
             ))}
           </ul>
-        </section>
+        </AdminCard>
       )}
 
       <WorkspaceActions
