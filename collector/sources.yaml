@@ -1,0 +1,42 @@
+# Starter list. Add 40-60 sources before launch; check each site's terms of use and robots.txt.
+# method: api | scrape.  follow: regex of links to open from a listing page.
+sources:
+  - name: Simpler Grants.gov (US federal, open to any applicant)
+    url: https://api.simpler.grants.gov/v1/opportunities/search
+    method: api
+    api: simpler_grants
+    query: ""
+
+  - name: GEF Small Grants Programme
+    url: https://sgp.undp.org/
+    method: scrape
+
+  - name: Tony Elumelu Foundation programmes
+    url: https://www.tonyelumelufoundation.org/
+    method: scrape
+
+  - name: US African Development Foundation
+    url: https://www.usadf.gov/
+    method: scrape
+
+  - name: African Women's Development Fund
+    url: https://awdf.org/
+    method: scrape
+
+  - name: Global Fund for Children
+    url: https://globalfundforchildren.org/
+    method: scrape
+
+  - name: Awesome Foundation
+    url: https://www.awesomefoundation.org/en
+    method: scrape
+
+  - name: US Embassy Nigeria – grant opportunities
+    url: https://ng.usembassy.gov/
+    method: scrape
+    follow: "grant|funding|opportunit"
+    max_pages: 15
+
+  # Next to add: EU Funding & Tenders search API, IATI Datastore API (needs free key), World Bank,
+  # AfDB, UN agencies, Canada Fund for Local Initiatives pages per country, other embassies,
+  # African foundations, national funds (TETFund, BOI, LSETF, NYDA, Youth Enterprise Fund), CSR programmes.

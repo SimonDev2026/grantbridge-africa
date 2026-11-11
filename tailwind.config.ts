@@ -48,6 +48,18 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        // GrantBridge brand tokens (see src/config/brand.ts)
+        brand: {
+          ink: '#14211B',
+          muted: '#5C6B63',
+          line: '#E3E7E1',
+          bg: '#FAF8F3',
+          green: '#0E6B4A',
+          greenSoft: '#E7F3EC',
+          sun: '#E8A33D',
+          sunSoft: '#FCF1DF',
+          blueTag: '#E8EEFB',
+        },
       },
       borderRadius: {
         lg: `var(--radius)`,
