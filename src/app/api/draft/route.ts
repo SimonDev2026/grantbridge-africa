@@ -1,9 +1,9 @@
 // POST /api/draft { grantId } — drafts every document the funder asks for, using the user's profile
 // and uploaded documents. Paid plans only (check the subscriptions table from the starter repo).
 import { chat, parseJson } from '@/libs/ai/client';
-import { DRAFT_APPLICATION_PROMPT } from '@/prompts/draft-application';
-import { createSupabaseServerClient } from '@/libs/supabase/supabase-server-client';
 import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
+import { createSupabaseServerClient } from '@/libs/supabase/supabase-server-client';
+import { DRAFT_APPLICATION_PROMPT } from '@/prompts/draft-application';
 
 const db = supabaseAdminClient as any;
 // Drafts included per month by plan (product names in Stripe). Pay-per-application credits: see migration 20261111000100.

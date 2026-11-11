@@ -1,5 +1,5 @@
-import { createSupabaseServerClient } from '@/libs/supabase/supabase-server-client';
 import { ProductWithPrices } from '@/features/pricing/types';
+import { createSupabaseServerClient } from '@/libs/supabase/supabase-server-client';
 
 export async function getProducts() {
   const supabase = await createSupabaseServerClient();

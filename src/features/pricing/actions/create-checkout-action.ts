@@ -8,7 +8,7 @@ import { getOrCreateCustomer } from '@/features/account/controllers/get-or-creat
 import { getSession } from '@/features/account/controllers/get-session';
 import { Price } from '@/features/pricing/types';
 import { sendCapiEvent } from '@/libs/meta/capi';
-import { stripeAdmin } from '@/libs/stripe/stripe-admin';
+import { getStripeAdmin } from '@/libs/stripe/stripe-admin';
 import { getURL } from '@/utils/get-url';
 
 export async function createCheckoutAction({ price, eventId, fbp, fbc }: { price: Price; eventId?: string; fbp?: string; fbc?: string }) {
@@ -21,7 +21,7 @@ export async function createCheckoutAction({ price, eventId, fbp, fbc }: { price
 
   const customer = await getOrCreateCustomer({ userId: session.user.id, email: session.user.email });
 
-  const checkoutSession = await stripeAdmin.checkout.sessions.create({
+  const checkoutSession = await getStripeAdmin().checkout.sessions.create({
     // No payment_method_types: Stripe shows every method enabled in the Dashboard
     // (cards, Apple Pay, Google Pay, Link). Keep Adaptive Pricing OFF in Dashboard so prices stay in USD.
     billing_address_collection: 'required',

@@ -2,9 +2,9 @@
 // Meta (Facebook) Pixel for Next.js App Router — loads only after cookie consent.
 // Add <MetaPixel /> inside <body> in src/app/layout.tsx.
 // Browser + server (Conversions API) events share the same eventId so Meta de-duplicates them.
-import Script from 'next/script';
-import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import Script from 'next/script';
 
 const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 declare global { interface Window { fbq?: (...args: unknown[]) => void } }

@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { getCustomerId } from '@/features/account/controllers/get-customer-id';
 import { getSession } from '@/features/account/controllers/get-session';
-import { stripeAdmin } from '@/libs/stripe/stripe-admin';
+import { getStripeAdmin } from '@/libs/stripe/stripe-admin';
 import { getURL } from '@/utils/get-url';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +25,7 @@ export async function GET() {
   }
 
   // 3. Create portal link and redirect user
-  const { url } = await stripeAdmin.billingPortal.sessions.create({
+  const { url } = await getStripeAdmin().billingPortal.sessions.create({
     customer,
     return_url: `${getURL()}/account`,
   });

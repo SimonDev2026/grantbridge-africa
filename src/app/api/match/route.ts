@@ -1,8 +1,8 @@
 // POST /api/match — (re)builds the signed-in user's profile vector and stores ranked matches with reasons.
 // Also run nightly for all users (Supabase pg_cron or a GitHub Action calling this with the service key).
 import { embed, toVector } from '@/libs/ai/client';
-import { createSupabaseServerClient } from '@/libs/supabase/supabase-server-client';
 import { supabaseAdminClient } from '@/libs/supabase/supabase-admin';
+import { createSupabaseServerClient } from '@/libs/supabase/supabase-server-client';
 
 const db = supabaseAdminClient as any;
 
