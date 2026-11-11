@@ -32,7 +32,7 @@ function mapGrant(g: any, country: string) {
   return {
     id: g.id,
     title: g.title,
-    funderName: g.funders?.name,
+    funderName: g.funderName ?? g.funders?.name,
     summary: g.summary,
     amount_usd_min: g.amount_usd_min,
     amount_usd_max: g.amount_usd_max,
@@ -63,44 +63,59 @@ function countryEligible(g: GrantRow, country: string, regions: string[]): boole
 }
 
 export async function POST(req: NextRequest) {
-  const parsed = Body.safeParse(await req.json());
-  if (!parsed.success) return Response.json({ error: 'Invalid input' }, { status: 400 });
-  const a = parsed.data as QuizAnswers;
+  try {
+    const parsed = Body.safeParse(await req.json());
+    if (!parsed.success) return Response.json({ error: 'Invalid input' }, { status: 400 });
+    const a = parsed.data as QuizAnswers;
 
-  const [{ data: grants }, { data: cr }] = await Promise.all([
-    db
-      .from('grants')
-      .select('*, funders(name)')
-      .eq('approved', true)
-      .eq('fee_charged', false)
-      .in('status', ['open', 'upcoming']),
-    a.country
-      ? db.from('country_regions').select('regions').eq('country', a.country).maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
-  const open = (grants ?? []) as GrantRow[];
-  const regions: string[] = cr?.regions ?? ['Africa'];
+    // Grants and funders are queried separately and joined in JS — the
+    // embedded `funders(name)` select depends on PostgREST's relationship
+    // cache, and a stale cache turns the whole endpoint into a 500.
+    const [{ data: grants, error }, { data: funders }, { data: cr }] = await Promise.all([
+      db
+        .from('grants')
+        .select('*')
+        .eq('approved', true)
+        .eq('fee_charged', false)
+        .in('status', ['open', 'upcoming']),
+      db.from('funders').select('id, name'),
+      a.country
+        ? db.from('country_regions').select('regions').eq('country', a.country).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+    if (error) return Response.json({ error: error.message }, { status: 500 });
+    const funderNameById = new Map<string, string>(
+      (funders ?? []).map((f: any) => [f.id, f.name])
+    );
+    const open = ((grants ?? []) as GrantRow[]).map((g: any) => ({
+      ...g,
+      funderName: funderNameById.get(g.funder_id) ?? null,
+    }));
+    const regions: string[] = cr?.regions ?? ['Africa'];
 
-  if (a.applicant_type && a.country) {
-    // Deterministic scorer on the partial answers.
-    const ranked = rankGrants(a, open, regions);
+    if (a.applicant_type && a.country) {
+      // Deterministic scorer on the partial answers.
+      const ranked = rankGrants(a, open, regions);
+      return Response.json({
+        eligibleCount: ranked.length,
+        openGrants: open.length,
+        scored: true,
+        examples: ranked.slice(0, 2).map((g: any) => mapGrant(g, a.country)),
+      });
+    }
+
+    // Fallback: open grants, country-filtered when a country is known.
+    const eligible = open.filter((g) => countryEligible(g, a.country, regions));
+    const byAmount = [...eligible].sort(
+      (x, y) => (y.amount_usd_max ?? 0) - (x.amount_usd_max ?? 0),
+    );
     return Response.json({
-      eligibleCount: ranked.length,
+      eligibleCount: eligible.length,
       openGrants: open.length,
-      scored: true,
-      examples: ranked.slice(0, 2).map((g: any) => mapGrant(g, a.country)),
+      scored: false,
+      examples: byAmount.slice(0, 2).map((g: any) => mapGrant(g, a.country)),
     });
+  } catch (err: any) {
+    return Response.json({ error: err?.message ?? 'Preview lookup failed' }, { status: 500 });
   }
-
-  // Fallback: open grants, country-filtered when a country is known.
-  const eligible = open.filter((g) => countryEligible(g, a.country, regions));
-  const byAmount = [...eligible].sort(
-    (x, y) => (y.amount_usd_max ?? 0) - (x.amount_usd_max ?? 0),
-  );
-  return Response.json({
-    eligibleCount: eligible.length,
-    openGrants: open.length,
-    scored: false,
-    examples: byAmount.slice(0, 2).map((g: any) => mapGrant(g, a.country)),
-  });
 }
