@@ -79,14 +79,7 @@ export default function ContactPage() {
               >
                 {BRAND.contact.email}
               </a>
-              . For support questions, use{' '}
-              <a
-                href={`mailto:${BRAND.contact.supportEmail}`}
-                className='font-semibold text-brand-green hover:underline'
-              >
-                {BRAND.contact.supportEmail}
-              </a>
-              .
+              {' — '}one mailbox for everything, including support.
             </p>
             <p className='mt-3 text-sm text-brand-muted'>
               For quick updates, join our{' '}

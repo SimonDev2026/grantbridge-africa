@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { CookieSettingsButton } from '@/components/cookie-settings-button';
 import { Logo } from '@/components/logo';
 import { SiteChrome } from '@/components/site-chrome';
+import { SupportChat } from '@/components/support-chat';
 import { Toaster } from '@/components/ui/toaster';
 import { BRAND } from '@/config/brand';
 import { ConsentBanner, MetaPixel } from '@/libs/meta/pixel';
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: PropsWithChildren) {
           {children}
         </SiteChrome>
         <ConsentBanner />
+        <SupportChat />
         <Toaster />
         <Analytics />
       </body>

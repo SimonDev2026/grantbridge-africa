@@ -24,9 +24,9 @@ export const BRAND = {
     alt: 'GrantBridge Africa logo — a bridge over Africa with the sun rising',
   },
   contact: {
-    // Provisional until the real domain is bought; the admin mailbox lives here.
-    email: 'admin@grantbridgeafrica.com',
-    supportEmail: 'support@grantbridgeafrica.com',
+    // One shared mailbox: info, support and admin all land here (owner decision 2026-11-11).
+    email: 'info@grantbridgeafrica.com',
+    supportEmail: 'info@grantbridgeafrica.com',
   },
   social: {
     // WhatsApp is the free channel first (guide §8): a public channel + click-to-chat.

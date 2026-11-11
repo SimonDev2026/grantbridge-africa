@@ -44,7 +44,7 @@ export function AdminPageHeader({
   title: string;
   subtitle: string;
   actions?: ReactNode;
-  active: 'overview' | 'orders';
+  active: 'overview' | 'orders' | 'support';
 }) {
   return (
     <div className='rounded-2xl border border-brand-line bg-white p-5 shadow-sm sm:p-6'>
@@ -91,6 +91,18 @@ export function AdminPageHeader({
           )}
         >
           Service orders
+        </Link>
+        <Link
+          href='/admin/support'
+          aria-current={active === 'support' ? 'page' : undefined}
+          className={cn(
+            'rounded-full px-4 py-2 transition-colors',
+            active === 'support'
+              ? 'bg-brand-green text-white'
+              : 'text-brand-muted hover:bg-brand-greenSoft hover:text-brand-green'
+          )}
+        >
+          Support messages
         </Link>
       </nav>
     </div>

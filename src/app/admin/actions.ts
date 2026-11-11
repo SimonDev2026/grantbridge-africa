@@ -289,3 +289,12 @@ export async function sendClientMessage(orderId: string, body: string) {
   revalidatePath(`/orders/${orderId}`);
   return { ok: true };
 }
+
+// ---------- Support messages (chat button) ----------
+export async function markSupportMessageReplied(messageId: string) {
+  await requireAdmin();
+  const { error } = await db.from('support_messages').update({ status: 'replied' }).eq('id', messageId);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/support');
+  return { ok: true };
+}

@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   if (!process.env.RESEND_API_KEY) {
     return Response.json(
-      { error: 'Email is not set up yet, so your message could not be sent. Please email us directly at admin@grantbridgeafrica.com.' },
+      { error: `Email is not set up yet, so your message could not be sent. Please email us directly at ${BRAND.contact.email}.` },
       { status: 503 }
     );
   }
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error('Careers email failed:', (e as Error).message);
     return Response.json(
-      { error: 'Your message could not be sent right now. Please try again, or email us directly at admin@grantbridgeafrica.com.' },
+      { error: `Your message could not be sent right now. Please try again, or email us directly at ${BRAND.contact.email}.` },
       { status: 502 }
     );
   }
